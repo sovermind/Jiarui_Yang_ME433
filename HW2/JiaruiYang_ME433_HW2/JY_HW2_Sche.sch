@@ -11558,11 +11558,11 @@ This footprint was designed to help hold the alignment of a through-hole compone
 <devices>
 <device name="" package="1X05">
 <connects>
-<connect gate="G$1" pin="GND" pad="1"/>
-<connect gate="G$1" pin="MCLR" pad="2"/>
-<connect gate="G$1" pin="PGC" pad="3"/>
+<connect gate="G$1" pin="GND" pad="3"/>
+<connect gate="G$1" pin="MCLR" pad="1"/>
+<connect gate="G$1" pin="PGC" pad="5"/>
 <connect gate="G$1" pin="PGG" pad="4"/>
-<connect gate="G$1" pin="VDD" pad="5"/>
+<connect gate="G$1" pin="VDD" pad="2"/>
 </connects>
 <technologies>
 <technology name=""/>
