@@ -19,6 +19,7 @@ void initSPI1() {
     SPI1CONbits.CKE = 1;        //data changes when clock goes from hi to low
     SPI1CONbits.CKP = 0;
     SPI1CONbits.MSTEN = 1;      //master operation
+    //SPI1CONbits.MODE16 = 1;
     SPI1CONbits.ON = 1;
     
 }
@@ -29,4 +30,19 @@ char SPI1_IO(char write) {
         ;
     }
     return SPI1BUF;
+}
+
+void DAQ_write(char channel, char value) {
+    char a = value >> 4;         //This automatically fill the first 4 bits as 1111, channel B
+    a ^=1<<6;
+    if (channel == 0)
+    {
+        a ^= 1<<7;               //invert the first bit, which makes it 0111. channel A
+    }
+    char b = value << 4;         //This makes the last four bits 0000
+    
+    CS = 0;
+    SPI1_IO(a);
+    SPI1_IO(b);
+    CS = 1;
 }

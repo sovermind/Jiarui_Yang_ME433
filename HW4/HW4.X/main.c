@@ -1,6 +1,7 @@
 #include<xc.h>           // processor SFR definitions
 #include<sys/attribs.h>  // __ISR macro
 #include "spi.h"
+#include <math.h>
 
 // DEVCFG0
 #pragma config DEBUG = 0b11 // no debugging
@@ -37,6 +38,15 @@
 #pragma config FUSBIDIO = 1 // USB pins controlled by USB module
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
+int count =0;
+int count2 = 0;
+//set up the interupt to generate data sent via SPI
+
+//set up voltage, channel A = 0, channel B = 1
+void setVoltage(char channel, double voltage) {
+    char vol_binary = (int)(voltage/3.3 *255);
+    DAQ_write(channel,vol_binary);
+}
 
 int main() {
 
@@ -68,19 +78,20 @@ int main() {
 	    // use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
 		  // remember the core timer runs at half the sysclk
         _CP0_SET_COUNT(0);
-        LATAbits.LATA4 = 1;
-        int waitTime = 12000;
-        while(_CP0_GET_COUNT() < waitTime) {
-            ;
-        }
-        LATAbits.LATA4 = 0;
-        _CP0_SET_COUNT(0);
-        while(_CP0_GET_COUNT() < waitTime) {
-            ;
-        }
+        int waitTime = 24000;   //1kHz updating rate
         
-        while (PORTBbits.RB4 == 0)
-        {
+        //update sine wave
+        double v = (3.3/2)*(1+sin(2*M_PI*count/100.0));
+        count = count +1;
+        setVoltage(0,v);
+        //update triangle wave
+        double tri_v = 3.3*count2/200.0;
+        count2= count2+1;
+        if (count2 == 200) {
+            count2 = 0;
+        }
+//        setVoltage(1,tri_v);
+        while(_CP0_GET_COUNT() < waitTime) {
             ;
         }
         
