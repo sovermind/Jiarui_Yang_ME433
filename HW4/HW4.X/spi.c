@@ -33,7 +33,7 @@ char SPI1_IO(char write) {
 }
 
 void DAQ_write(char channel, unsigned char value) {
-    char a = value >> 4;         //This automatically fill the first 4 bits as 0000, channel A
+    unsigned char a = value >> 4;         //This automatically fill the first 4 bits as 0000, channel A
     a ^=1<<6;
     a ^=1<<5;
     a ^=1<<4;
@@ -41,7 +41,7 @@ void DAQ_write(char channel, unsigned char value) {
     {
         a ^= 1<<7;               //invert the first bit, which makes it 0111. channel B
     }
-    char b = value << 4;         //This makes the last four bits 0000
+    unsigned char b = value << 4;         //This makes the last four bits 0000
     
     CS = 0;
     SPI1_IO(a);

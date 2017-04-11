@@ -7,6 +7,6 @@
 
 void initSPI1();
 char SPI1_IO(char write);
-void DAQ_write(char channel, char value);
+void DAQ_write(char channel,unsigned char value);
 
 #endif

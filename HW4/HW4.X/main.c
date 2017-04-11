@@ -90,7 +90,7 @@ int main() {
         if (count2 == 200) {
             count2 = 0;
         }
-//        setVoltage(1,tri_v);
+        setVoltage(1,tri_v);
         while(_CP0_GET_COUNT() < waitTime) {
             ;
         }
