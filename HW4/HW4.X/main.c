@@ -44,7 +44,7 @@ int count2 = 0;
 
 //set up voltage, channel A = 0, channel B = 1
 void setVoltage(char channel, double voltage) {
-    char vol_binary = (int)(voltage/3.3 *255);
+    unsigned char vol_binary = (int)(voltage/3.3 *255);
     DAQ_write(channel,vol_binary);
 }
 
