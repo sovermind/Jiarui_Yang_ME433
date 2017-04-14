@@ -38,16 +38,57 @@
 #pragma config FUSBIDIO = 1 // USB pins controlled by USB module
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
+#define EXPANDER_ADDR 0b0100000  //connect A2 A1 A0 all to ground to get 0
+
 void initExpander() {
+    //turn off the analog
+    ANSELBbits.ANSB2 = 0;
+    ANSELBbits.ANSB3 = 0;
+    i2c_master_setup();
     
+    //initialize pin GP0-3 as output and GP 4-7 as input
+    i2c_master_start();
+    i2c_master_send(EXPANDER_ADDR<<1|0);//send address, write mode
+    i2c_master_send(0x00);              //write to IODIR
+    i2c_master_send(0b11110000);        //set GP0-3 output, GP 4-7 input
+    i2c_master_stop();
+    
+    //set GP0-3 low
+    i2c_master_start();
+    i2c_master_send(EXPANDER_ADDR<<1|0);//send address, write mode
+    i2c_master_send(0x09);              //write to GPIO
+    i2c_master_send(0b00000000);
+    i2c_master_stop();
+    
+    //turn on the pull up resistor for PG4-7
+//    i2c_master_start();
+//    i2c_master_send(EXPANDER_ADDR<<1|0);//send address, write mode
+//    i2c_master_send(0x06);              //write to GPPU
+//    i2c_master_send(0b10000000);        
+//    i2c_master_stop();
+}
+
+unsigned char getExpander() {
+    i2c_master_start();
+    i2c_master_send(EXPANDER_ADDR<<1|0);//send address, write mode
+    i2c_master_send(0x09);              //write to GPIO
+    i2c_master_restart();
+    i2c_master_send(EXPANDER_ADDR<<1|1);//send address, read mode
+    unsigned char r = i2c_master_recv();//save the value
+    i2c_master_ack(1);                  //tell slave that master get the value
+    i2c_master_stop();
+    
+    return r;
 }
 
 void setExpander(char pin, char level) {
-    
-}
-
-char getExpander() {
-    
+    unsigned char value_now = getExpander();
+    value_now ^= (-level ^ value_now) & (1 << pin); //http://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit-in-c-c
+    i2c_master_start();
+    i2c_master_send(EXPANDER_ADDR<<1|0);//send address, write mode
+    i2c_master_send(0x09);              //write to GPIO
+    i2c_master_send(value_now);        //set pin to level
+    i2c_master_stop();
 }
 
 int main() {
@@ -71,16 +112,29 @@ int main() {
     TRISAbits.TRISA4 = 0;
     LATAbits.LATA4 = 1;
 
+    //initialize Expander
+    initExpander();
+    
     __builtin_enable_interrupts();
 
     while(1) {
 	    // use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
 		  // remember the core timer runs at half the sysclk
-        _CP0_SET_COUNT(0);
-        int waitTime = 24000;   //1kHz updating rate
+//        _CP0_SET_COUNT(0);
+//        int waitTime = 24000;   //1kHz updating rate
+//        
+//        while(_CP0_GET_COUNT() < waitTime) {
+//            ;
+//        }
         
-        while(_CP0_GET_COUNT() < waitTime) {
-            ;
+        //read value from GP7
+        unsigned char in_value = getExpander();
+        unsigned char GP7_value = (in_value>>7)&1;
+        if (GP7_value == 1) {
+            setExpander(0,1);
+        }
+        else {
+            setExpander(0,0);
         }
         
     }
