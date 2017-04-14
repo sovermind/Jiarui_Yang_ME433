@@ -130,7 +130,7 @@ int main() {
         //read value from GP7
         unsigned char in_value = getExpander();
         unsigned char GP7_value = (in_value>>7)&1;
-        if (GP7_value == 1) {
+        if (GP7_value == 0) {
             setExpander(0,1);
         }
         else {
