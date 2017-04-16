@@ -73,6 +73,32 @@ void display_String(unsigned char* c,unsigned short x, unsigned short y, unsigne
     }
 }
 
+//draw the progress bar at x,y position with bar_color and can define the thickness
+//It will clear all other pixels within (x+thickness) locations
+//thickness and width are in pixels
+void draw_bar(unsigned short thickness,unsigned short width, unsigned short x, unsigned short y, unsigned short bar_color, unsigned short back_color) {
+    int w = 0;
+    int t = 0;
+    //check if the bar will exceed the boundry
+    if (x+width > 128) {
+        width = 127 - x;
+    }
+    if (y+thickness > 128) {
+        thickness = 127 - y;
+    }
+    
+    for (w = 0;w<128;w++) {
+        for (t = y;t<y+thickness;t++) {
+            if (w<x || w>(x+width)) {
+                LCD_drawPixel(w,t,back_color);
+            }
+            else {
+                LCD_drawPixel(w,t,bar_color);
+            }
+        }
+    }
+}
+
 int main() {
 
     __builtin_disable_interrupts();
@@ -105,6 +131,8 @@ int main() {
 //    LCD_drawPixel(64,64,BLACK);
 //    display_character('H',60,60,BLACK,WHITE);
 //    display_String("Hello, world",28,32,BLACK,WHITE);
+//    draw_bar(10,20,40,90,BLACK,WHITE);
+//    draw_bar(10,30,50,90,BLACK,WHITE);
 
     int length = 0;
     unsigned char thestring[100];
@@ -113,12 +141,31 @@ int main() {
 		  // remember the core timer runs at half the sysclk
         _CP0_SET_COUNT(0);
         int waitTime = 48000;   //5Hz updating rate for -50 to 50, 500Hz for updating one number
+        //write words
         sprintf(thestring,"Hello, world %d ", length);
         display_String(thestring,28,32,BLACK,WHITE);
+        
+        //draw the bar here
+        unsigned short bar_x = 0;
+        unsigned short bar_y = 45;
+        unsigned short bar_t = 5;
+        unsigned short bar_w = 0;
+        if (length >=0){
+            bar_x = 64;
+            bar_w = length;
+        }
+        else {
+            bar_w = -length;
+            bar_x = 64+length;
+        }
+        draw_bar(bar_t,bar_w,bar_x,bar_y,BLACK,WHITE);
+        
+        //update the length
         length ++;
         if (length == 51) {
             length = -50;
         }
+
         //compute fps here
         int time = _CP0_GET_COUNT();
         float time_past = 24000000.0/time;
