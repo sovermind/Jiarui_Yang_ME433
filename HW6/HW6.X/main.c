@@ -39,8 +39,37 @@
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
 //draw the char c on x,y location with color
-void display_character(unsigned char c, unsigned short x, unsigned short y, unsigned short color) {
+void display_character(unsigned char c, unsigned short x, unsigned short y, unsigned short char_color, unsigned short back_color) {
+    char ascii_row = c - 0x20;
+    int i=0;
+    int j=0;
     
+    for (i=0;i<5;i++) {
+        if ((x+i) < 128) {
+            for (j=0;j<8;j++) {
+                if ((ASCII[ascii_row][i]>>j)&1 == 1) {
+                    if ((y+j)<128) {
+                        LCD_drawPixel(x+i,y+j,char_color);    //write the charactor color
+                    }
+                }
+                else {
+                    if ((y+j)<128) {
+                        LCD_drawPixel(x+i,y+j,back_color);    //clear the background color
+                    }
+                }
+            }
+        }
+    }
+}
+
+void display_String(unsigned char* c,unsigned short x, unsigned short y, unsigned short char_color, unsigned short back_color){
+    char cc = *c;
+    unsigned short count =0;
+    while (cc != 0) {
+        display_character(cc,x+count*5,y,char_color,back_color);
+        count ++;
+        cc = *(c+count);
+    }
 }
 
 int main() {
@@ -72,7 +101,9 @@ int main() {
     __builtin_enable_interrupts();
     
     LCD_clearScreen(WHITE);
-    LCD_drawPixel(64,64,BLACK);
+//    LCD_drawPixel(64,64,BLACK);
+//    display_character('H',60,60,BLACK,WHITE);
+    display_String("Hello, world",28,32,BLACK,WHITE);
 
     while(1) {
 	    // use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
