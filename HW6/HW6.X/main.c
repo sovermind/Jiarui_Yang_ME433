@@ -112,13 +112,19 @@ int main() {
 	    // use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
 		  // remember the core timer runs at half the sysclk
         _CP0_SET_COUNT(0);
-        int waitTime = 4800000;   //2400000 10Hz updating rate
+        int waitTime = 48000;   //5Hz updating rate for -50 to 50, 500Hz for updating one number
         sprintf(thestring,"Hello, world %d ", length);
         display_String(thestring,28,32,BLACK,WHITE);
         length ++;
         if (length == 51) {
             length = -50;
         }
+        //compute fps here
+        int time = _CP0_GET_COUNT();
+        float time_past = 24000000.0/time;
+        sprintf(thestring,"FPS = %.2f",time_past);
+        display_String(thestring,40,70,BLACK,WHITE);
+        
         while(_CP0_GET_COUNT() < waitTime) {
             ;
         }
