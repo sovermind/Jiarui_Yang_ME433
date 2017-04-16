@@ -2,6 +2,7 @@
 #include<sys/attribs.h>  // __ISR macro
 #include "ILI9163C.h"
 #include <math.h>
+#include <stdio.h>
 
 // DEVCFG0
 #pragma config DEBUG = 0b11 // no debugging
@@ -103,18 +104,25 @@ int main() {
     LCD_clearScreen(WHITE);
 //    LCD_drawPixel(64,64,BLACK);
 //    display_character('H',60,60,BLACK,WHITE);
-    display_String("Hello, world",28,32,BLACK,WHITE);
+//    display_String("Hello, world",28,32,BLACK,WHITE);
 
+    int length = 0;
+    unsigned char thestring[100];
     while(1) {
 	    // use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
 		  // remember the core timer runs at half the sysclk
-//        _CP0_SET_COUNT(0);
-//        int waitTime = 24000;   //1kHz updating rate
-//        
-//        while(_CP0_GET_COUNT() < waitTime) {
-//            ;
-//        }
-        
+        _CP0_SET_COUNT(0);
+        int waitTime = 4800000;   //2400000 10Hz updating rate
+        sprintf(thestring,"Hello, world %d ", length);
+        display_String(thestring,28,32,BLACK,WHITE);
+        length ++;
+        if (length == 51) {
+            length = -50;
+        }
+        while(_CP0_GET_COUNT() < waitTime) {
+            ;
+        }
+
         
     }
 }
