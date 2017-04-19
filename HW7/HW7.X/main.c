@@ -1,6 +1,7 @@
 #include<xc.h>           // processor SFR definitions
 #include<sys/attribs.h>  // __ISR macro
 #include "i2c_master_noint.h"
+#include "ILI9163C.h"
 #include <math.h>
 
 // DEVCFG0
@@ -40,6 +41,67 @@
 
 #define IMU_ADDR 0b1101011  //default address for IMU board
 
+//all functions to display on screen, copied from HW 6
+//draw the char c on x,y location with color
+void display_character(unsigned char c, unsigned short x, unsigned short y, unsigned short char_color, unsigned short back_color) {
+    char ascii_row = c - 0x20;
+    int i=0;
+    int j=0;
+    
+    for (i=0;i<5;i++) {
+        if ((x+i) < 128) {
+            for (j=0;j<8;j++) {
+                if ((ASCII[ascii_row][i]>>j)&1 == 1) {
+                    if ((y+j)<128) {
+                        LCD_drawPixel(x+i,y+j,char_color);    //write the charactor color
+                    }
+                }
+                else {
+                    if ((y+j)<128) {
+                        LCD_drawPixel(x+i,y+j,back_color);    //clear the background color
+                    }
+                }
+            }
+        }
+    }
+}
+
+void display_String(unsigned char* c,unsigned short x, unsigned short y, unsigned short char_color, unsigned short back_color){
+    char cc = *c;
+    unsigned short count =0;
+    while (cc != 0) {
+        display_character(cc,x+count*5,y,char_color,back_color);
+        count ++;
+        cc = *(c+count);
+    }
+}
+
+//draw the progress bar at x,y position with bar_color and can define the thickness
+//It will clear all other pixels within (x+thickness) locations
+//thickness and width are in pixels
+void draw_bar(unsigned short thickness,unsigned short width, unsigned short x, unsigned short y, unsigned short bar_color, unsigned short back_color) {
+    int w = 0;
+    int t = 0;
+    //check if the bar will exceed the boundry
+    if (x+width > 128) {
+        width = 127 - x;
+    }
+    if (y+thickness > 128) {
+        thickness = 127 - y;
+    }
+    
+    for (w = 0;w<128;w++) {
+        for (t = y;t<y+thickness;t++) {
+            if (w<x || w>(x+width)) {
+                LCD_drawPixel(w,t,back_color);
+            }
+            else {
+                LCD_drawPixel(w,t,bar_color);
+            }
+        }
+    }
+}
+
 void initIMU() {
     //turn off the analog
     ANSELBbits.ANSB2 = 0;
@@ -77,10 +139,15 @@ int main() {
     TRISAbits.TRISA4 = 0;
     LATAbits.LATA4 = 1;
 
-    //initialize Expander
+    //initialize IMU
     initIMU();
+    //init SPI1 and LCD
+    SPI1_init();
+    LCD_init();
     
     __builtin_enable_interrupts();
+    //clear the screen
+    LCD_clearScreen(WHITE);
 
     while(1) {
 	    // use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
