@@ -41,6 +41,7 @@
 
 #define IMU_ADDR 0b1101011  //default address for IMU board 0b1101011
 
+void writetoIMU(unsigned char register_addr, unsigned char send_value);
 //all functions to display on screen, copied from HW 6
 //draw the char c on x,y location with color
 void display_character(unsigned char c, unsigned short x, unsigned short y, unsigned short char_color, unsigned short back_color) {
@@ -106,7 +107,12 @@ void initIMU() {
     //turn off the analog
     ANSELBbits.ANSB2 = 0;
     ANSELBbits.ANSB3 = 0;
+    //i2c init
     i2c_master_setup();
+    //set up accl and gyro
+    writetoIMU(0x10,0b10000010);  //CTRL1_XL accelerator
+    writetoIMU(0x11,0b10001000);  //CTRL2_G gyro
+    writetoIMU(0x12,0b00000100);  //CTRL3_C control
     
 }
 
@@ -124,8 +130,16 @@ unsigned char readIMU(unsigned char register_addr) {
 
 }
 
-void setExpander(char pin, char level) {
+void IMU_read_multiple(unsigned char address, unsigned char register_addr, unsigned char * data, int length) {
+    
+}
 
+void writetoIMU(unsigned char register_addr, unsigned char send_value) {
+    i2c_master_start();
+    i2c_master_send(IMU_ADDR<<1|0);//send address, write mode
+    i2c_master_send(register_addr);              //write to register
+    i2c_master_send(send_value);        //sent in value
+    i2c_master_stop();
 }
 
 int main() {
