@@ -39,7 +39,7 @@
 #pragma config FUSBIDIO = 1 // USB pins controlled by USB module
 #pragma config FVBUSONIO = 1 // USB BUSON controlled by USB module
 
-#define IMU_ADDR 0b1101011  //default address for IMU board
+#define IMU_ADDR 0b1101011  //default address for IMU board 0b1101011
 
 //all functions to display on screen, copied from HW 6
 //draw the char c on x,y location with color
@@ -110,7 +110,17 @@ void initIMU() {
     
 }
 
-unsigned char getExpander() {
+unsigned char readIMU(unsigned char register_addr) {
+    i2c_master_start();
+    i2c_master_send(IMU_ADDR<<1|0);//send address, write mode
+    i2c_master_send(register_addr);              //write to register
+    i2c_master_restart();
+    i2c_master_send(IMU_ADDR<<1|1);//send address, read mode
+    unsigned char r = i2c_master_recv();//save the value
+    i2c_master_ack(1);                  //tell slave that master get the value
+    i2c_master_stop();
+    
+    return r;
 
 }
 
@@ -148,6 +158,16 @@ int main() {
     __builtin_enable_interrupts();
     //clear the screen
     LCD_clearScreen(WHITE);
+//    display_String("Hello, world",28,32,BLACK,WHITE);
+    
+    //read from who am I
+    unsigned char who_am_i_addr = 0x0F;
+    unsigned char who_am_i_value = readIMU(who_am_i_addr);
+    if (who_am_i_value == 0b01101001){
+        display_String("Connected!",15,15,BLACK,WHITE);
+    }
+
+    
 
     while(1) {
 	    // use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
