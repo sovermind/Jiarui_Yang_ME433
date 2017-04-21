@@ -88,7 +88,7 @@ void display_String(unsigned char* c,unsigned short x, unsigned short y, unsigne
 //draw the progress bar at x,y position with bar_color and can define the thickness
 //It will clear all other pixels within (x+thickness) locations
 //thickness and width are in pixels
-void draw_bar(unsigned short thickness,unsigned short width, unsigned short x, unsigned short y, unsigned short bar_color, unsigned short back_color) {
+void draw_h_bar(unsigned short thickness,unsigned short width, unsigned short x, unsigned short y, unsigned short bar_color, unsigned short back_color) {
     int w = 0;
     int t = 0;
     //check if the bar will exceed the boundry
@@ -106,6 +106,23 @@ void draw_bar(unsigned short thickness,unsigned short width, unsigned short x, u
             }
             else {
                 LCD_drawPixel(w,t,bar_color);
+            }
+        }
+    }
+}
+
+//draw the verticle bar, will clear a region of bar width and specified y region
+void draw_v_bar(unsigned short y_up_lim,unsigned short y_low_lim, unsigned short thickness,unsigned short width, unsigned short x, unsigned short y, unsigned short bar_color, unsigned short back_color) {
+    int w = 0;
+    int t = 0;
+    
+    for (w = x;w<x+width;w++) {
+        for (t = y_up_lim;t<y_low_lim;t++) {
+            if (t>=y && t<=y+thickness) {
+                LCD_drawPixel(w,t,bar_color);
+            }
+            else {
+                LCD_drawPixel(w,t,back_color);
             }
         }
     }
@@ -271,13 +288,15 @@ int main() {
         sprintf(str,"roll = %.3f   ",roll);
         display_String(str,15,35,BLACK,WHITE);
         
+        unsigned short y_words_end = 44;
+        
         //draw the bar feature here
         //draw x direction bar
         unsigned short x_bar_x = 0;
         unsigned short x_bar_y = 75;
         unsigned short x_bar_t = 5;
         unsigned short x_bar_w = 0;
-        int x_length = roll/90.0*45.0;
+        int x_length = roll/90.0*40.0;
         if (x_length <=0){
             x_bar_x = 64;
             x_bar_w = -x_length;
@@ -286,25 +305,27 @@ int main() {
             x_bar_w = x_length;
             x_bar_x = 64-x_length;
         }
-        draw_bar(x_bar_t,x_bar_w,x_bar_x,x_bar_y,BLACK,WHITE);
+        draw_h_bar(x_bar_t,x_bar_w,x_bar_x,x_bar_y,RED,WHITE);
         
         //draw y direction bar
         unsigned short y_bar_x = 64;
         unsigned short y_bar_y = 0;
         unsigned short y_bar_t = 0;
         unsigned short y_bar_w = 5;
-        int y_length = pitch/90.0*45.0;
+        int y_length = pitch/90.0*40.0;
         if (y_length <=0){
             y_bar_y = 75 + y_length;
             y_bar_t = -y_length;
+            draw_v_bar(y_words_end,75,y_bar_t,y_bar_w,y_bar_x,y_bar_y,GREEN,WHITE);
+            draw_v_bar(80,90,5,y_bar_w,y_bar_x,81,WHITE,WHITE);
         }
         else {
             y_bar_y = 80;
             y_bar_t = y_length;
+            draw_v_bar(80,127,y_bar_t,y_bar_w,y_bar_x,y_bar_y,GREEN,WHITE);
+            draw_v_bar(65,75,5,y_bar_w,y_bar_x,66,WHITE,WHITE);
         }
-        draw_bar(y_bar_t,y_bar_w,y_bar_x,y_bar_y,BLACK,WHITE);
-        //for y direction, also draw the background color bar to clear the unneed part
-        draw_bar();
+        
         
         while(_CP0_GET_COUNT() < waitTime) {
             ;
