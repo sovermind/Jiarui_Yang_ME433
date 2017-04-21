@@ -130,8 +130,25 @@ unsigned char readIMU(unsigned char register_addr) {
 
 }
 
-void IMU_read_multiple(unsigned char address, unsigned char register_addr, unsigned char * data, int length) {
-    
+void IMU_read_multiple(unsigned char register_addr, unsigned char * data, int length) {
+    i2c_master_start();
+    i2c_master_send(IMU_ADDR<<1|0);//send address, write mode
+    i2c_master_send(register_addr);              //write to register
+    i2c_master_restart();
+    i2c_master_send(IMU_ADDR<<1|1);//send address, read mode
+    int count = 0;
+    while (1) {
+        data[count] = i2c_master_recv();//save the value
+        if (count == (length-1)) {
+            i2c_master_ack(1);                  //tell slave no more byte should be send
+            break;
+        } 
+        else {
+            i2c_master_ack(0);                  //tell slave to send another byte
+        }
+        count ++;
+    }
+    i2c_master_stop();
 }
 
 void writetoIMU(unsigned char register_addr, unsigned char send_value) {
@@ -140,6 +157,10 @@ void writetoIMU(unsigned char register_addr, unsigned char send_value) {
     i2c_master_send(register_addr);              //write to register
     i2c_master_send(send_value);        //sent in value
     i2c_master_stop();
+}
+
+void read_all_value() {
+    
 }
 
 int main() {
@@ -181,17 +202,57 @@ int main() {
         display_String("Connected!",15,15,BLACK,WHITE);
     }
 
+//    //test to see if i can read from accel
+//    unsigned char test1 = readIMU(0x28);
+//    unsigned char test2 = readIMU(0X29);
+//    unsigned char str[100];
+//    sprintf(str,"L = %x, H = %x",test1,test2);
+//    display_String(str,15,25,BLACK,WHITE);
     
 
     while(1) {
 	    // use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
 		  // remember the core timer runs at half the sysclk
-//        _CP0_SET_COUNT(0);
-//        int waitTime = 24000;   //1kHz updating rate
-//        
-//        while(_CP0_GET_COUNT() < waitTime) {
-//            ;
-//        }
+        _CP0_SET_COUNT(0);
+        int waitTime = 4800000;   //1kHz updating rate
+        
+        int data_length = 14;   //which means all data
+        unsigned char alldata[data_length];
+        IMU_read_multiple(0x20,alldata,data_length);
+        //seperate all data
+        unsigned char L_bits[data_length/2];
+        unsigned char H_bits[data_length/2];
+        int i=0;
+        for (i = 0;i<data_length/2;i++) {
+            L_bits[i] = alldata[i*2];
+            H_bits[i] = alldata[i*2+1];
+        }
+        signed short temp_raw = (H_bits[0])<<8|(L_bits[0]);
+        signed short g_x_raw = (H_bits[1])<<8|(L_bits[1]);
+        signed short g_y_raw = (H_bits[2])<<8|(L_bits[2]);
+        signed short g_z_raw = (H_bits[3])<<8|(L_bits[3]);
+        signed short a_x_raw = (H_bits[4])<<8|(L_bits[4]);
+        signed short a_y_raw = (H_bits[5])<<8|(L_bits[5]);
+        signed short a_z_raw = (H_bits[6])<<8|(L_bits[6]);
+        
+        float temp = temp_raw*0.0625; 
+        float g_x = g_x_raw*35.0/1000.0;       //35mdps/LSB from data sheet page 15
+        float g_y = g_y_raw*35.0/1000.0;
+        float g_z = g_z_raw*35.0/1000.0;
+        float a_x = a_x_raw*0.061/1000.0;      //0.061mg/LSB from data sheet page 15
+        float a_y = a_y_raw*0.061/1000.0;
+        float a_z = a_z_raw*0.061/1000.0;
+        
+        char str[100];
+        sprintf(str,"a_x = %.3f   ",a_x);
+        display_String(str,15,35,BLACK,WHITE);
+        sprintf(str,"a_z = %.3f   ",a_z);
+//        sprintf(str,"H = %x, L = %x   ",H_bits[1],L_bits[1]);
+        display_String(str,15,45,BLACK,WHITE);
+        
+        while(_CP0_GET_COUNT() < waitTime) {
+            ;
+        }
         
     }
 }
