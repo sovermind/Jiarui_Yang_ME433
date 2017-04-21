@@ -41,6 +41,14 @@
 
 #define IMU_ADDR 0b1101011  //default address for IMU board 0b1101011
 
+float temp = 0; 
+float g_x = 0;       //35mdps/LSB from data sheet page 15
+float g_y = 0;
+float g_z = 0;
+float a_x = 0;      //0.061mg/LSB from data sheet page 15
+float a_y = 0;
+float a_z = 0;
+
 void writetoIMU(unsigned char register_addr, unsigned char send_value);
 //all functions to display on screen, copied from HW 6
 //draw the char c on x,y location with color
@@ -160,7 +168,33 @@ void writetoIMU(unsigned char register_addr, unsigned char send_value) {
 }
 
 void read_all_value() {
-    
+    int data_length = 14;   //which means all data
+    unsigned char alldata[data_length];
+    IMU_read_multiple(0x20,alldata,data_length);
+    //seperate all data
+    unsigned char L_bits[data_length/2];
+    unsigned char H_bits[data_length/2];
+    int i=0;
+    for (i = 0;i<data_length/2;i++) {
+        L_bits[i] = alldata[i*2];
+        H_bits[i] = alldata[i*2+1];
+    }
+    signed short temp_raw = (H_bits[0])<<8|(L_bits[0]);
+    signed short g_x_raw = (H_bits[1])<<8|(L_bits[1]);
+    signed short g_y_raw = (H_bits[2])<<8|(L_bits[2]);
+    signed short g_z_raw = (H_bits[3])<<8|(L_bits[3]);
+    signed short a_x_raw = (H_bits[4])<<8|(L_bits[4]);
+    signed short a_y_raw = (H_bits[5])<<8|(L_bits[5]);
+    signed short a_z_raw = (H_bits[6])<<8|(L_bits[6]);
+        
+    float temp = temp_raw*0.0625; 
+    g_x = g_x_raw*35.0/1000.0;       //35mdps/LSB from data sheet page 15
+    g_y = g_y_raw*35.0/1000.0;
+    g_z = g_z_raw*35.0/1000.0;
+    a_x = a_x_raw*0.061/1000.0;      //0.061mg/LSB from data sheet page 15
+    a_y = a_y_raw*0.061/1000.0;
+    a_z = a_z_raw*0.061/1000.0;
+    a_z = -a_z;
 }
 
 int main() {
@@ -210,45 +244,39 @@ int main() {
 //    display_String(str,15,25,BLACK,WHITE);
     
 
+    float current_time = 0;
+    float prev_time = 0;
+    float roll = 0;
+    float pitch = 0;
     while(1) {
 	    // use _CP0_SET_COUNT(0) and _CP0_GET_COUNT() to test the PIC timing
 		  // remember the core timer runs at half the sysclk
         _CP0_SET_COUNT(0);
         int waitTime = 4800000;   //1kHz updating rate
         
-        int data_length = 14;   //which means all data
-        unsigned char alldata[data_length];
-        IMU_read_multiple(0x20,alldata,data_length);
-        //seperate all data
-        unsigned char L_bits[data_length/2];
-        unsigned char H_bits[data_length/2];
-        int i=0;
-        for (i = 0;i<data_length/2;i++) {
-            L_bits[i] = alldata[i*2];
-            H_bits[i] = alldata[i*2+1];
-        }
-        signed short temp_raw = (H_bits[0])<<8|(L_bits[0]);
-        signed short g_x_raw = (H_bits[1])<<8|(L_bits[1]);
-        signed short g_y_raw = (H_bits[2])<<8|(L_bits[2]);
-        signed short g_z_raw = (H_bits[3])<<8|(L_bits[3]);
-        signed short a_x_raw = (H_bits[4])<<8|(L_bits[4]);
-        signed short a_y_raw = (H_bits[5])<<8|(L_bits[5]);
-        signed short a_z_raw = (H_bits[6])<<8|(L_bits[6]);
-        
-        float temp = temp_raw*0.0625; 
-        float g_x = g_x_raw*35.0/1000.0;       //35mdps/LSB from data sheet page 15
-        float g_y = g_y_raw*35.0/1000.0;
-        float g_z = g_z_raw*35.0/1000.0;
-        float a_x = a_x_raw*0.061/1000.0;      //0.061mg/LSB from data sheet page 15
-        float a_y = a_y_raw*0.061/1000.0;
-        float a_z = a_z_raw*0.061/1000.0;
-        
+        read_all_value();
         char str[100];
         sprintf(str,"a_x = %.3f   ",a_x);
         display_String(str,15,35,BLACK,WHITE);
-        sprintf(str,"a_z = %.3f   ",a_z);
+        sprintf(str,"a_y = %.3f   ",a_y);
 //        sprintf(str,"H = %x, L = %x   ",H_bits[1],L_bits[1]);
         display_String(str,15,45,BLACK,WHITE);
+        sprintf(str,"a_z = %.3f   ",a_z);
+        display_String(str,15,55,BLACK,WHITE);
+        current_time = _CP0_GET_COUNT()/24000000.0;
+        float time_diff = current_time - prev_time;
+        prev_time = current_time;
+        //compute pitch and roll use atan2()
+        //pitch => around x axis; roll =>around y axis
+        //both pitch and roll are opposite as what indicated on the IMU board
+        //x, y directions are also opposite
+        pitch = (atan2(a_y,a_z)*180/M_PI);
+        sprintf(str,"pitch = %.3f   ",pitch);
+        display_String(str,15,65,BLACK,WHITE);
+        
+        roll = (atan2(-a_x,a_z)*180/M_PI);
+        sprintf(str,"roll = %.3f   ",roll);
+        display_String(str,15,75,BLACK,WHITE);
         
         while(_CP0_GET_COUNT() < waitTime) {
             ;
