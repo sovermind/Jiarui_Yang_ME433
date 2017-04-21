@@ -233,7 +233,7 @@ int main() {
     unsigned char who_am_i_addr = 0x0F;
     unsigned char who_am_i_value = readIMU(who_am_i_addr);
     if (who_am_i_value == 0b01101001){
-        display_String("Connected!",15,15,BLACK,WHITE);
+        display_String("Connected!",15,10,BLACK,WHITE);
     }
 
 //    //test to see if i can read from accel
@@ -243,9 +243,6 @@ int main() {
 //    sprintf(str,"L = %x, H = %x",test1,test2);
 //    display_String(str,15,25,BLACK,WHITE);
     
-
-    float current_time = 0;
-    float prev_time = 0;
     float roll = 0;
     float pitch = 0;
     while(1) {
@@ -256,27 +253,58 @@ int main() {
         
         read_all_value();
         char str[100];
-        sprintf(str,"a_x = %.3f   ",a_x);
-        display_String(str,15,35,BLACK,WHITE);
-        sprintf(str,"a_y = %.3f   ",a_y);
-//        sprintf(str,"H = %x, L = %x   ",H_bits[1],L_bits[1]);
-        display_String(str,15,45,BLACK,WHITE);
-        sprintf(str,"a_z = %.3f   ",a_z);
-        display_String(str,15,55,BLACK,WHITE);
-        current_time = _CP0_GET_COUNT()/24000000.0;
-        float time_diff = current_time - prev_time;
-        prev_time = current_time;
+//        sprintf(str,"a_x = %.3f   ",a_x);
+//        display_String(str,15,35,BLACK,WHITE);
+//        sprintf(str,"a_y = %.3f   ",a_y);
+//        display_String(str,15,45,BLACK,WHITE);
+//        sprintf(str,"a_z = %.3f   ",a_z);
+//        display_String(str,15,55,BLACK,WHITE);
         //compute pitch and roll use atan2()
         //pitch => around x axis; roll =>around y axis
         //both pitch and roll are opposite as what indicated on the IMU board
         //x, y directions are also opposite
         pitch = (atan2(a_y,a_z)*180/M_PI);
         sprintf(str,"pitch = %.3f   ",pitch);
-        display_String(str,15,65,BLACK,WHITE);
+        display_String(str,15,25,BLACK,WHITE);
         
         roll = (atan2(-a_x,a_z)*180/M_PI);
         sprintf(str,"roll = %.3f   ",roll);
-        display_String(str,15,75,BLACK,WHITE);
+        display_String(str,15,35,BLACK,WHITE);
+        
+        //draw the bar feature here
+        //draw x direction bar
+        unsigned short x_bar_x = 0;
+        unsigned short x_bar_y = 75;
+        unsigned short x_bar_t = 5;
+        unsigned short x_bar_w = 0;
+        int x_length = roll/90.0*45.0;
+        if (x_length <=0){
+            x_bar_x = 64;
+            x_bar_w = -x_length;
+        }
+        else {
+            x_bar_w = x_length;
+            x_bar_x = 64-x_length;
+        }
+        draw_bar(x_bar_t,x_bar_w,x_bar_x,x_bar_y,BLACK,WHITE);
+        
+        //draw y direction bar
+        unsigned short y_bar_x = 64;
+        unsigned short y_bar_y = 0;
+        unsigned short y_bar_t = 0;
+        unsigned short y_bar_w = 5;
+        int y_length = pitch/90.0*45.0;
+        if (y_length <=0){
+            y_bar_y = 75 + y_length;
+            y_bar_t = -y_length;
+        }
+        else {
+            y_bar_y = 80;
+            y_bar_t = y_length;
+        }
+        draw_bar(y_bar_t,y_bar_w,y_bar_x,y_bar_y,BLACK,WHITE);
+        //for y direction, also draw the background color bar to clear the unneed part
+        draw_bar();
         
         while(_CP0_GET_COUNT() < waitTime) {
             ;
