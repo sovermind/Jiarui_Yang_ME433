@@ -121,7 +121,26 @@ void APP_Initialize ( void )
     /* TODO: Initialize your application's state machine and other
      * parameters.
      */
-    
+    __builtin_disable_interrupts();
+
+    // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
+    __builtin_mtc0(_CP0_CONFIG, _CP0_CONFIG_SELECT, 0xa4210583);
+
+    // 0 data RAM access wait states
+    BMXCONbits.BMXWSDRM = 0x0;
+
+    // enable multi vector interrupts
+    INTCONbits.MVEC = 0x1;
+
+    // disable JTAG to get pins back
+    DDPCONbits.JTAGEN = 0;
+
+    // do your TRIS and LAT commands here
+    TRISBbits.TRISB4 = 1;
+    TRISAbits.TRISA4 = 0;
+    LATAbits.LATA4 = 1;
+
+    __builtin_enable_interrupts();
 }
 
 
@@ -155,7 +174,22 @@ void APP_Tasks ( void )
 
         case APP_STATE_SERVICE_TASKS:
         {
-        
+            _CP0_SET_COUNT(0);
+            LATAbits.LATA4 = 1;
+            int waitTime = 12000;
+            while(_CP0_GET_COUNT() < waitTime) {
+                ;
+            }
+            LATAbits.LATA4 = 0;
+            _CP0_SET_COUNT(0);
+            while(_CP0_GET_COUNT() < waitTime) {
+                ;
+            }
+
+            while (PORTBbits.RB4 == 0)
+            {
+                ;
+            }
             break;
         }
 
