@@ -19,6 +19,8 @@
           </logicalFolder>
         </logicalFolder>
         <itemPath>../src/app.h</itemPath>
+        <itemPath>../src/i2c_master_noint.h</itemPath>
+        <itemPath>../src/ILI9163C.h</itemPath>
       </logicalFolder>
       <logicalFolder name="f1" displayName="framework" projectFiles="true">
         <logicalFolder name="f1" displayName="gfx" projectFiles="true">
@@ -96,6 +98,8 @@
         </logicalFolder>
         <itemPath>../src/app.c</itemPath>
         <itemPath>../src/main.c</itemPath>
+        <itemPath>../src/i2c_master_noint.c</itemPath>
+        <itemPath>../src/ILI9163C.c</itemPath>
       </logicalFolder>
       <logicalFolder name="f1" displayName="framework" projectFiles="true">
         <logicalFolder name="f1" displayName="system" projectFiles="true">
@@ -131,7 +135,7 @@
         <platformTool>PICkit3PlatformTool</platformTool>
         <languageToolchain>XC32</languageToolchain>
         <languageToolchainVersion>1.40</languageToolchainVersion>
-        <platform>3</platform>
+        <platform>4</platform>
       </toolsSet>
       <compileType>
         <linkerTool>
@@ -287,6 +291,7 @@
         <property key="ToolFirmwareOption.UseLatestFirmware" value="true"/>
         <property key="UART1" value="true"/>
         <property key="UART2" value="true"/>
+        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="true"/>
