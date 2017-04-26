@@ -53,6 +53,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include <xc.h>
 #include "ILI9163C.h"
 #include "i2c_master_noint.h"
+#include "math.h"
 
 // *****************************************************************************
 // *****************************************************************************
@@ -60,6 +61,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 // *****************************************************************************
 #define IMU_ADDR 0b1101011  //default address for IMU board 0b1101011
+
 uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
@@ -494,7 +496,7 @@ void APP_Initialize(void) {
     // do your TRIS and LAT commands here
     TRISBbits.TRISB4 = 1;
     TRISAbits.TRISA4 = 0;
-    LATAbits.LATA4 = 1;
+    LATAbits.LATA4 = 0;
     //initialize IMU
     initIMU();
     //init SPI1 and LCD
@@ -502,11 +504,11 @@ void APP_Initialize(void) {
     LCD_init();
     
     __builtin_enable_interrupts();
-    
+
     //clear the screen
     LCD_clearScreen(WHITE);
 //    display_String("Hello, world",28,32,BLACK,WHITE);
-    
+
     //read from who am I
     unsigned char who_am_i_addr = 0x0F;
     unsigned char who_am_i_value = readIMU(who_am_i_addr);
@@ -615,6 +617,7 @@ void APP_Tasks(void) {
                     appData.state = APP_STATE_ERROR;
                     break;
                 }
+                
             }
 
             break;
@@ -629,8 +632,15 @@ void APP_Tasks(void) {
             /* Check if a character was received or a switch was pressed.
              * The isReadComplete flag gets updated in the CDC event handler. */
 
-            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (48000000 / 2 / 5)) {
+//            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (48000000 / 2 / 5)) {
+//                appData.state = APP_STATE_SCHEDULE_WRITE;
+//            }
+            
+            if (appData.isReadComplete && (appData.readBuffer[0] == 'r')) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
+            }
+            else if (appData.isReadComplete && (appData.readBuffer[0] != 'r')) {
+                appData.state = APP_STATE_SCHEDULE_READ;
             }
 
             break;
