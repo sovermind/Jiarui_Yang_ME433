@@ -91,6 +91,8 @@ float a_z = 0;
 
 float roll = 0;
 float pitch = 0;
+bool print_IMU = false;
+int IMU_count = 0;
 
 // *****************************************************************************
 // *****************************************************************************
@@ -479,20 +481,6 @@ void APP_Initialize(void) {
     appData.state = APP_STATE_INIT;
     
     //LCD and IMU initialization
-    __builtin_disable_interrupts();
-
-    // set the CP0 CONFIG register to indicate that kseg0 is cacheable (0x3)
-    __builtin_mtc0(_CP0_CONFIG, _CP0_CONFIG_SELECT, 0xa4210583);
-
-    // 0 data RAM access wait states
-    BMXCONbits.BMXWSDRM = 0x0;
-
-    // enable multi vector interrupts
-    INTCONbits.MVEC = 0x1;
-
-    // disable JTAG to get pins back
-    DDPCONbits.JTAGEN = 0;
-
     // do your TRIS and LAT commands here
     TRISBbits.TRISB4 = 1;
     TRISAbits.TRISA4 = 0;
@@ -502,11 +490,10 @@ void APP_Initialize(void) {
     //init SPI1 and LCD
     SPI1_init();
     LCD_init();
-    
-    __builtin_enable_interrupts();
 
     //clear the screen
     LCD_clearScreen(WHITE);
+    IMU_count = 0;
 //    display_String("Hello, world",28,32,BLACK,WHITE);
 
     //read from who am I
@@ -623,6 +610,19 @@ void APP_Tasks(void) {
             break;
 
         case APP_STATE_WAIT_FOR_READ_COMPLETE:
+            if (appData.isReadComplete && (appData.readBuffer[0] == 'r')) {
+                print_IMU = true;
+                IMU_count = 0;
+            }
+            else if (appData.isReadComplete && (appData.readBuffer[0] != 'r')) {
+                appData.state = APP_STATE_SCHEDULE_READ;
+                print_IMU = false;
+            }
+            if (print_IMU) {
+                appData.state = APP_STATE_CHECK_TIMER;
+            }
+            break;
+                
         case APP_STATE_CHECK_TIMER:
 
             if (APP_StateReset()) {
@@ -632,16 +632,23 @@ void APP_Tasks(void) {
             /* Check if a character was received or a switch was pressed.
              * The isReadComplete flag gets updated in the CDC event handler. */
 
-//            if (appData.isReadComplete || _CP0_GET_COUNT() - startTime > (48000000 / 2 / 5)) {
-//                appData.state = APP_STATE_SCHEDULE_WRITE;
-//            }
-            
-            if (appData.isReadComplete && (appData.readBuffer[0] == 'r')) {
+            //get the IMU display for 100 Hz
+            if (appData.isReadComplete || (_CP0_GET_COUNT() - startTime > (48000000 / 2 / 100) && IMU_count < 101)) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
+                IMU_count ++;
             }
-            else if (appData.isReadComplete && (appData.readBuffer[0] != 'r')) {
-                appData.state = APP_STATE_SCHEDULE_READ;
+            if (IMU_count == 101) {
+                IMU_count == 0;
+                print_IMU = false;
             }
+            
+//            if (appData.isReadComplete && (appData.readBuffer[0] == 'r')) {
+//                appData.state = APP_STATE_SCHEDULE_WRITE;
+//                print_IMU = true;
+//            }
+//            else if (appData.isReadComplete && (appData.readBuffer[0] != 'r')) {
+//                appData.state = APP_STATE_SCHEDULE_READ;
+//            }
 
             break;
 
@@ -658,7 +665,7 @@ void APP_Tasks(void) {
             appData.isWriteComplete = false;
             appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
 
-            len = sprintf(dataOut, "%d\r\n", i);
+            len = sprintf(dataOut, "%d\r\n", IMU_count);
             i++;
             if (appData.isReadComplete) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
