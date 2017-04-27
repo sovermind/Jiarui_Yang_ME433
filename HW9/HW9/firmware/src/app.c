@@ -51,7 +51,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "app.h"
 #include <stdio.h>
 #include <xc.h>
-#include "ILI9163C.h"
 #include "i2c_master_noint.h"
 #include "math.h"
 
@@ -101,84 +100,6 @@ int IMU_count = 0;
 // *****************************************************************************
 
 void writetoIMU(unsigned char register_addr, unsigned char send_value);
-
-//all functions to display on screen, copied from HW 6
-//draw the char c on x,y location with color
-void display_character(unsigned char c, unsigned short x, unsigned short y, unsigned short char_color, unsigned short back_color) {
-    char ascii_row = c - 0x20;
-    int i=0;
-    int j=0;
-    
-    for (i=0;i<5;i++) {
-        if ((x+i) < 128) {
-            for (j=0;j<8;j++) {
-                if ((ASCII[ascii_row][i]>>j)&1 == 1) {
-                    if ((y+j)<128) {
-                        LCD_drawPixel(x+i,y+j,char_color);    //write the charactor color
-                    }
-                }
-                else {
-                    if ((y+j)<128) {
-                        LCD_drawPixel(x+i,y+j,back_color);    //clear the background color
-                    }
-                }
-            }
-        }
-    }
-}
-
-void display_String(unsigned char* c,unsigned short x, unsigned short y, unsigned short char_color, unsigned short back_color){
-    char cc = *c;
-    unsigned short count =0;
-    while (cc != 0) {
-        display_character(cc,x+count*5,y,char_color,back_color);
-        count ++;
-        cc = *(c+count);
-    }
-}
-
-//draw the progress bar at x,y position with bar_color and can define the thickness
-//It will clear all other pixels within (x+thickness) locations
-//thickness and width are in pixels
-void draw_h_bar(unsigned short thickness,unsigned short width, unsigned short x, unsigned short y, unsigned short bar_color, unsigned short back_color) {
-    int w = 0;
-    int t = 0;
-    //check if the bar will exceed the boundry
-    if (x+width > 128) {
-        width = 127 - x;
-    }
-    if (y+thickness > 128) {
-        thickness = 127 - y;
-    }
-    
-    for (w = 0;w<128;w++) {
-        for (t = y;t<y+thickness;t++) {
-            if (w<x || w>(x+width)) {
-                LCD_drawPixel(w,t,back_color);
-            }
-            else {
-                LCD_drawPixel(w,t,bar_color);
-            }
-        }
-    }
-}
-
-//draw the verticle bar, will clear a region of bar width and specified y region
-void draw_v_bar(unsigned short y_up_lim,unsigned short y_low_lim, unsigned short thickness,unsigned short width, unsigned short x, unsigned short y, unsigned short bar_color, unsigned short back_color) {
-    int w = 0;
-    int t = 0;
-    
-    for (w = x;w<x+width;w++) {
-        for (t = y_up_lim;t<y_low_lim;t++) {
-            if (t>=y && t<=y+thickness) {
-                LCD_drawPixel(w,t,bar_color);
-            }
-            else {
-                LCD_drawPixel(w,t,back_color);
-            }
-        }
-    }
-}
 
 void initIMU() {
     //turn off the analog
@@ -487,20 +408,14 @@ void APP_Initialize(void) {
     LATAbits.LATA4 = 0;
     //initialize IMU
     initIMU();
-    //init SPI1 and LCD
-    SPI1_init();
-    LCD_init();
-
-    //clear the screen
-    LCD_clearScreen(WHITE);
+    
     IMU_count = 0;
-//    display_String("Hello, world",28,32,BLACK,WHITE);
 
     //read from who am I
     unsigned char who_am_i_addr = 0x0F;
     unsigned char who_am_i_value = readIMU(who_am_i_addr);
     if (who_am_i_value == 0b01101001){
-        display_String("Connected!",15,10,BLACK,WHITE);
+//        display_String("Connected!",15,10,BLACK,WHITE);
     }
 
 //    //test to see if i can read from accel
