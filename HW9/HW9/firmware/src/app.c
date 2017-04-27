@@ -256,7 +256,7 @@ void read_all_value() {
     signed short a_y_raw = (H_bits[5])<<8|(L_bits[5]);
     signed short a_z_raw = (H_bits[6])<<8|(L_bits[6]);
         
-    float temp = temp_raw*0.0625; 
+    temp = temp_raw*0.0625; 
     g_x = g_x_raw*35.0/1000.0;       //35mdps/LSB from data sheet page 15
     g_y = g_y_raw*35.0/1000.0;
     g_z = g_z_raw*35.0/1000.0;
@@ -665,8 +665,12 @@ void APP_Tasks(void) {
             appData.isWriteComplete = false;
             appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
 
-            len = sprintf(dataOut, "%d\r\n", IMU_count);
-            i++;
+//            len = sprintf(dataOut, "%d\r\n", IMU_count);
+//            i++;
+            
+            //get the IMU data and print it out
+            read_all_value();
+            len = sprintf(dataOut,"%d ax=%.3f ay=%.3f az=%.3f gx=%.3f gy=%.3f gz=%.3f\r\n",IMU_count,a_x,a_y,a_z,g_x,g_y,g_z);
             if (appData.isReadComplete) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,

@@ -204,7 +204,7 @@ void read_all_value() {
     signed short a_y_raw = (H_bits[5])<<8|(L_bits[5]);
     signed short a_z_raw = (H_bits[6])<<8|(L_bits[6]);
         
-    float temp = temp_raw*0.0625; 
+    temp = temp_raw*0.0625; 
     g_x = g_x_raw*35.0/1000.0;       //35mdps/LSB from data sheet page 15
     g_y = g_y_raw*35.0/1000.0;
     g_z = g_z_raw*35.0/1000.0;
