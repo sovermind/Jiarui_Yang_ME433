@@ -60,6 +60,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 // *****************************************************************************
 #define IMU_ADDR 0b1101011  //default address for IMU board 0b1101011
+#define BUFFER_CAP 100
 
 uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
@@ -93,6 +94,15 @@ float pitch = 0;
 bool print_IMU = false;
 int IMU_count = 0;
 
+
+float MAF_buffer[BUFFER_CAP];
+float IIR_buffer[BUFFER_CAP];
+float FIR_buffer[BUFFER_CAP];
+
+int MAF_buffer_count = 0;
+int IIR_buffer_count = 0;
+int FIR_buffer_count = 0;
+
 // *****************************************************************************
 // *****************************************************************************
 // Section: Application Callback Functions
@@ -100,6 +110,34 @@ int IMU_count = 0;
 // *****************************************************************************
 
 void writetoIMU(unsigned char register_addr, unsigned char send_value);
+
+void buffer_clear() {
+    int i = 0;
+    for (i=0;i<BUFFER_CAP;i++){
+        MAF_buffer[i] = 0;
+        IIR_buffer[i] = 0;
+        FIR_buffer[i] = 0;
+    }
+    MAF_buffer_count = 0;
+    IIR_buffer_count = 0;
+    FIR_buffer_count = 0;
+}
+
+//function to perform MAF
+float MAF(int ave_num) {
+    MAF_buffer[MAF_buffer_count] = a_z;
+    MAF_buffer_count ++;
+    if (MAF_buffer_count == ave_num) {
+        MAF_buffer_count = 0;
+    }
+    float sum = 0;
+    int i = 0;
+    for (i=0;i<ave_num;i++)
+    {
+        sum = sum + MAF_buffer[i];
+    }
+    return sum/ave_num;
+}
 
 void initIMU() {
     //turn off the analog
@@ -410,6 +448,9 @@ void APP_Initialize(void) {
     initIMU();
     
     IMU_count = 0;
+    
+    //init buffer arrays to all zeros
+    buffer_clear();
 
     //read from who am I
     unsigned char who_am_i_addr = 0x0F;
@@ -552,9 +593,11 @@ void APP_Tasks(void) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
                 IMU_count ++;
             }
+            //after data collect finish, reset all count values
             if (IMU_count == 101) {
                 IMU_count == 0;
                 print_IMU = false;
+                buffer_clear();
             }
             
 //            if (appData.isReadComplete && (appData.readBuffer[0] == 'r')) {
@@ -585,7 +628,9 @@ void APP_Tasks(void) {
             
             //get the IMU data and print it out
             read_all_value();
-            len = sprintf(dataOut,"%d ax=%.3f ay=%.3f az=%.3f gx=%.3f gy=%.3f gz=%.3f\r\n",IMU_count,a_x,a_y,a_z,g_x,g_y,g_z);
+            float MAF_data = MAF(4);
+//            len = sprintf(dataOut,"%d\ta_z=%.3f\tMAF=%.3f\r\n",IMU_count,a_z,MAF_data);
+            len = sprintf(dataOut,"%d,%.3f,%.3f\r\n",IMU_count,a_z,MAF_data);
             if (appData.isReadComplete) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
