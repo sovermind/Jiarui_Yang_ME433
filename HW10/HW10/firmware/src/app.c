@@ -66,6 +66,7 @@ uint8_t APP_MAKE_BUFFER_DMA_READY dataOut[APP_READ_BUFFER_SIZE];
 uint8_t APP_MAKE_BUFFER_DMA_READY readBuffer[APP_READ_BUFFER_SIZE];
 int len, i = 0;
 int startTime = 0;
+int collect_size = 400;
 
 // *****************************************************************************
 /* Application Data
@@ -448,6 +449,7 @@ void APP_Initialize(void) {
     initIMU();
     
     IMU_count = 0;
+    collect_size = 400;
     
     //init buffer arrays to all zeros
     buffer_clear();
@@ -589,12 +591,12 @@ void APP_Tasks(void) {
              * The isReadComplete flag gets updated in the CDC event handler. */
 
             //get the IMU display for 100 Hz
-            if (appData.isReadComplete || (_CP0_GET_COUNT() - startTime > (48000000 / 2 / 100) && IMU_count < 101)) {
+            if (appData.isReadComplete || (_CP0_GET_COUNT() - startTime > (48000000 / 2 / 100) && IMU_count < collect_size+1)) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
                 IMU_count ++;
             }
             //after data collect finish, reset all count values
-            if (IMU_count == 101) {
+            if (IMU_count == collect_size+1) {
                 IMU_count == 0;
                 print_IMU = false;
                 buffer_clear();
