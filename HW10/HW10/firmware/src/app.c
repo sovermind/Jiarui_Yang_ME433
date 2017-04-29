@@ -140,6 +140,13 @@ float MAF(int ave_num) {
     return sum/ave_num;
 }
 
+float IIR(float a, float b) {
+    IIR_buffer[1] = a_z;
+    float ave = a*IIR_buffer[0]+b*IIR_buffer[1];
+    IIR_buffer[0] = IIR_buffer[1];
+    return ave;
+}
+
 void initIMU() {
     //turn off the analog
     ANSELBbits.ANSB2 = 0;
@@ -631,8 +638,9 @@ void APP_Tasks(void) {
             //get the IMU data and print it out
             read_all_value();
             float MAF_data = MAF(4);
+            float IIR_data = IIR(0.5,0.5);
 //            len = sprintf(dataOut,"%d\ta_z=%.3f\tMAF=%.3f\r\n",IMU_count,a_z,MAF_data);
-            len = sprintf(dataOut,"%d,%.3f,%.3f\r\n",IMU_count,a_z,MAF_data);
+            len = sprintf(dataOut,"%d,%.3f,%.3f,%.3f\r\n",IMU_count,a_z,MAF_data,IIR_data);
             if (appData.isReadComplete) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,

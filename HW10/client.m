@@ -1,4 +1,4 @@
-function [raw,filter] = client(port,collect_size)
+function [raw,MAF,IIR] = client(port,collect_size)
 %   provides a menu for accessing PIC32 motor control functions
 %
 %   client(port)
@@ -42,19 +42,21 @@ clean = onCleanup(@()fclose(mySerial));
     fprintf(mySerial,'%c\n',selection);
     
     raw = zeros(collect_size,1);
-    filter = zeros(collect_size,1);
+    MAF = zeros(collect_size,1);
+    IIR = zeros(collect_size,1);
     % take the appropriate action
     for i = 1:1:collect_size
         aa = fscanf(mySerial,'%c\r\n');
-        aaa = textscan(aa,'%f,%f,%f');
+        aaa = textscan(aa,'%f,%f,%f,%f');
         thedata = cell2mat(aaa);
         check_size = size(thedata);
         if check_size(1,1) == 0
-            thedata=zeros(1,3);
+            thedata=zeros(1,4);
         end
             
         raw(i,1) = thedata(1,2);
-        filter(i,1) = thedata(1,3);
+        MAF(i,1) = thedata(1,3);
+        IIR(i,1) = thedata(1,4);
     end
 %     data = fscanf(mySerial,'%c\r\n');
 %     data2 = fscanf(mySerial,'%c\r\n');
@@ -64,6 +66,7 @@ clean = onCleanup(@()fclose(mySerial));
     figure;
     plot(raw,'r');
     hold on;
-    plot(filter,'b');
+    plot(MAF,'b');
+    plot(IIR,'g');
 
 end
