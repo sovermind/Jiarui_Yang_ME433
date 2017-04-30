@@ -147,6 +147,28 @@ float IIR(float a, float b) {
     return ave;
 }
 
+float FIR(int sample_numb, float *gains) {
+    //make sure that new value always at the end of the array
+    if (FIR_buffer_count == sample_numb) {
+        FIR_buffer_count = sample_numb - 1;
+    }
+    //shift array value left
+    float sum = 0;
+    int i = 0;
+    for (i = 0;i<sample_numb-1;i++) {
+        FIR_buffer[i] = FIR_buffer[i+1];
+        sum = sum + gains[i]*FIR_buffer[i];
+    }
+    
+    sum = sum + gains[sample_numb-1]*a_z;
+    //put new value to the end of array
+    FIR_buffer[FIR_buffer_count] = a_z;
+    FIR_buffer_count ++;
+    
+    return sum;
+
+}
+
 void initIMU() {
     //turn off the analog
     ANSELBbits.ANSB2 = 0;
@@ -639,8 +661,13 @@ void APP_Tasks(void) {
             read_all_value();
             float MAF_data = MAF(4);
             float IIR_data = IIR(0.5,0.5);
+            //Set FIR gains
+            int s_n = 4;
+            float gg[] = {0.25,0.25,0.25,0.25};
+
+            float FIR_data = FIR(s_n,gg);
 //            len = sprintf(dataOut,"%d\ta_z=%.3f\tMAF=%.3f\r\n",IMU_count,a_z,MAF_data);
-            len = sprintf(dataOut,"%d,%.3f,%.3f,%.3f\r\n",IMU_count,a_z,MAF_data,IIR_data);
+            len = sprintf(dataOut,"%d,%.3f,%.3f,%.3f,%3f\r\n",IMU_count,a_z,MAF_data,IIR_data,FIR_data);
             if (appData.isReadComplete) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
