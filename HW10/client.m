@@ -1,4 +1,4 @@
-function [raw,MAF,IIR] = client(port,collect_size)
+function [raw,MAF,IIR,FIR] = client(port,collect_size)
 %   provides a menu for accessing PIC32 motor control functions
 %
 %   client(port)
