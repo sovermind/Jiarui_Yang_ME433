@@ -67,16 +67,41 @@ end
 % end
 
 % plot the fft of the raw data
-Y = fft(raw);
-P2 = abs(Y/collect_size);
-P1 = P2(1:collect_size/2+1);
-P1(2:end-1) = 2*P1(2:end-1);
-ff = 100*(0:(collect_size/2))/collect_size;
+rawY = fft(raw);
+rawP2 = abs(rawY/collect_size);
+rawP1 = rawP2(1:collect_size/2+1);
+rawP1(2:end-1) = 2*rawP1(2:end-1);
+rawff = 100*(0:(collect_size/2))/collect_size;
 figure;
-plot(ff,P1) 
+loglog(rawff,rawP1,'r') 
 title('Single-Sided Amplitude Spectrum of X(t)')
 xlabel('f (Hz)')
 ylabel('|P1(f)|')
+hold on;
+
+MAFY = fft(MAF);
+MAFP2 = abs(MAFY/collect_size);
+MAFP1 = MAFP2(1:collect_size/2+1);
+MAFP1(2:end-1) = 2*MAFP1(2:end-1);
+MAFff = 100*(0:(collect_size/2))/collect_size;
+loglog(MAFff,MAFP1,'b')
+
+IIRY = fft(IIR);
+IIRP2 = abs(IIRY/collect_size);
+IIRP1 = IIRP2(1:collect_size/2+1);
+IIRP1(2:end-1) = 2*IIRP1(2:end-1);
+IIRff = 100*(0:(collect_size/2))/collect_size;
+loglog(IIRff,IIRP1,'g')
+
+FIRY = fft(FIR);
+FIRP2 = abs(FIRY/collect_size);
+FIRP1 = FIRP2(1:collect_size/2+1);
+FIRP1(2:end-1) = 2*FIRP1(2:end-1);
+FIRff = 100*(0:(collect_size/2))/collect_size;
+loglog(FIRff,FIRP1,'y')
+legend('raw','MAF','IIR','FIR')
+
+
 
 % plot the data
 figure;
@@ -84,6 +109,7 @@ plot(raw,'r');
 hold on;
 plot(MAF,'b');
 plot(IIR,'g');
-plot(FIR,'y')
+plot(FIR,'y');
+legend('raw','MAF','IIR','FIR')
 
 end

@@ -662,8 +662,10 @@ void APP_Tasks(void) {
             float MAF_data = MAF(4);
             float IIR_data = IIR(0.5,0.5);
             //Set FIR gains
-            int s_n = 4;
-            float gg[] = {0.0457,0.4543,0.4543,0.0457};
+            int s_n = 7;
+//            float gg[] = {0.0457,0.4543,0.4543,0.0457};    //four gains
+            float gg[] = {0.0264,0.1405,0.3331,0.3331,0.1405,0.0264};       //six gains
+//            float gg[] = {0.0212,0.0897,0.2343,0.3094,0.2343,0.0897,0.0212};
 
             float FIR_data = FIR(s_n,gg);
 //            len = sprintf(dataOut,"%d\ta_z=%.3f\tMAF=%.3f\r\n",IMU_count,a_z,MAF_data);
