@@ -104,6 +104,7 @@ int MAF_buffer_count = 0;
 int IIR_buffer_count = 0;
 int FIR_buffer_count = 0;
 
+float MAF_data[3];
 // *****************************************************************************
 // *****************************************************************************
 // Section: Application Callback Functions
@@ -125,19 +126,45 @@ void buffer_clear() {
 }
 
 //function to perform MAF
-float MAF(int ave_num) {
-    MAF_buffer[MAF_buffer_count] = a_z;
+//float MAF(int ave_num) {
+//    MAF_buffer[MAF_buffer_count] = a_z;
+//    MAF_buffer_count ++;
+//    if (MAF_buffer_count == ave_num) {
+//        MAF_buffer_count = 0;
+//    }
+//    float sum = 0;
+//    int i = 0;
+//    for (i=0;i<ave_num;i++)
+//    {
+//        sum = sum + MAF_buffer[i];
+//    }
+//    return sum/ave_num;
+//}
+
+//test another method of filter
+void MAF(int ave_num) {
+    MAF_buffer[MAF_buffer_count] = a_x;
+    MAF_buffer[MAF_buffer_count+ave_num] = a_y;
+    MAF_buffer[MAF_buffer_count+ave_num*2] = a_z;
     MAF_buffer_count ++;
     if (MAF_buffer_count == ave_num) {
         MAF_buffer_count = 0;
     }
-    float sum = 0;
+    float sum_x = 0;
+    float sum_y = 0;
+    float sum_z = 0;
+    
     int i = 0;
     for (i=0;i<ave_num;i++)
     {
-        sum = sum + MAF_buffer[i];
+        sum_x = sum_x + MAF_buffer[i];
+        sum_y = sum_y + MAF_buffer[i+ave_num];
+        sum_z = sum_z + MAF_buffer[i+ave_num*2];
     }
-    return sum/ave_num;
+    
+    MAF_data[0] = sum_x/ave_num;
+    MAF_data[1] = sum_y/ave_num;
+    MAF_data[2] = sum_z/ave_num;
 }
 
 float IIR(float a, float b) {
@@ -483,6 +510,10 @@ void APP_Initialize(void) {
     //init buffer arrays to all zeros
     buffer_clear();
 
+    MAF_data[0] = 0;
+    MAF_data[1] = 0;
+    MAF_data[2] = 0;
+    
     //read from who am I
     unsigned char who_am_i_addr = 0x0F;
     unsigned char who_am_i_value = readIMU(who_am_i_addr);
@@ -659,7 +690,8 @@ void APP_Tasks(void) {
             
             //get the IMU data and print it out
             read_all_value();
-            float MAF_data = MAF(4);
+            //float MAF_data = MAF(4);
+            MAF(4);
             float IIR_data = IIR(0.5,0.5);
             //Set FIR gains
             int s_n = 7;
@@ -668,8 +700,9 @@ void APP_Tasks(void) {
 //            float gg[] = {0.0212,0.0897,0.2343,0.3094,0.2343,0.0897,0.0212};
 
             float FIR_data = FIR(s_n,gg);
-//            len = sprintf(dataOut,"%d\ta_z=%.3f\tMAF=%.3f\r\n",IMU_count,a_z,MAF_data);
-            len = sprintf(dataOut,"%d,%.3f,%.3f,%.3f,%3f\r\n",IMU_count,a_z,MAF_data,IIR_data,FIR_data);
+//            len = sprintf(dataOut,"%d,%f,%f,%f\r\n",IMU_count,MAF_data[0],MAF_data[1],MAF_data[2]);
+            len = sprintf(dataOut,"%d,%.3f,%.3f,%.3f,%3f\r\n",IMU_count,a_z,MAF_data[2],IIR_data,FIR_data);
+            
             if (appData.isReadComplete) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,

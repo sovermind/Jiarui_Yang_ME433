@@ -54,6 +54,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 
 #include "app.h"
+#include <stdio.h>
+#include <xc.h>
+#include "i2c_master_noint.h"
+#include "math.h"
 
 
 // *****************************************************************************
@@ -63,6 +67,13 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 
 // *****************************************************************************
+
+#define IMU_ADDR 0b1101011  //default address for IMU board 0b1101011
+#define BUFFER_CAP 100
+
+int len, i = 0;
+int startTime = 0;
+int collect_size = 400;
 /* Application Data
 
   Summary:
@@ -83,12 +94,195 @@ APP_DATA appData;
 MOUSE_REPORT mouseReport APP_MAKE_BUFFER_DMA_READY;
 MOUSE_REPORT mouseReportPrevious APP_MAKE_BUFFER_DMA_READY;
 
+float temp = 0; 
+float g_x = 0;       //35mdps/LSB from data sheet page 15
+float g_y = 0;
+float g_z = 0;
+float a_x = 0;      //0.061mg/LSB from data sheet page 15
+float a_y = 0;
+float a_z = 0;
+
+float roll = 0;
+float pitch = 0;
+int IMU_count = 0;
+
+
+float MAF_buffer[BUFFER_CAP];
+float IIR_buffer[BUFFER_CAP];
+float FIR_buffer[BUFFER_CAP];
+
+int MAF_buffer_count = 0;
+int IIR_buffer_count = 0;
+int FIR_buffer_count = 0;
+
+float MAF_data[3];
 
 // *****************************************************************************
 // *****************************************************************************
 // Section: Application Callback Functions
 // *****************************************************************************
 // *****************************************************************************
+
+void writetoIMU(unsigned char register_addr, unsigned char send_value);
+
+void buffer_clear() {
+    int i = 0;
+    int j = 0;
+    for (i=0;i<BUFFER_CAP;i++){
+        MAF_buffer[i] = 0;
+        IIR_buffer[i] = 0;
+        FIR_buffer[i] = 0;
+    }
+    MAF_buffer_count = 0;
+    IIR_buffer_count = 0;
+    FIR_buffer_count = 0;
+    
+    for (j = 0;j<3;j++) {
+        MAF_data[j] = 0;
+    }
+    
+}
+
+//function to perform MAF
+void MAF(int ave_num) {
+    MAF_buffer[MAF_buffer_count] = a_x;
+    MAF_buffer[MAF_buffer_count+ave_num] = a_y;
+    MAF_buffer[MAF_buffer_count+ave_num*2] = a_z;
+    MAF_buffer_count ++;
+    if (MAF_buffer_count == ave_num) {
+        MAF_buffer_count = 0;
+    }
+    float sum_x = 0;
+    float sum_y = 0;
+    float sum_z = 0;
+    
+    int i = 0;
+    for (i=0;i<ave_num;i++)
+    {
+        sum_x = sum_x + MAF_buffer[i];
+        sum_y = sum_y + MAF_buffer[i+ave_num];
+        sum_z = sum_z + MAF_buffer[i+ave_num*2];
+    }
+    
+    MAF_data[0] = sum_x/ave_num;
+    MAF_data[1] = sum_y/ave_num;
+    MAF_data[2] = sum_z/ave_num;
+}
+
+float IIR(float a, float b) {
+    IIR_buffer[1] = a_z;
+    float ave = a*IIR_buffer[0]+b*IIR_buffer[1];
+    IIR_buffer[0] = IIR_buffer[1];
+    return ave;
+}
+
+float FIR(int sample_numb, float *gains) {
+    //make sure that new value always at the end of the array
+    if (FIR_buffer_count == sample_numb) {
+        FIR_buffer_count = sample_numb - 1;
+    }
+    //shift array value left
+    float sum = 0;
+    int i = 0;
+    for (i = 0;i<sample_numb-1;i++) {
+        FIR_buffer[i] = FIR_buffer[i+1];
+        sum = sum + gains[i]*FIR_buffer[i];
+    }
+    
+    sum = sum + gains[sample_numb-1]*a_z;
+    //put new value to the end of array
+    FIR_buffer[FIR_buffer_count] = a_z;
+    FIR_buffer_count ++;
+    
+    return sum;
+
+}
+
+void initIMU() {
+    //turn off the analog
+    ANSELBbits.ANSB2 = 0;
+    ANSELBbits.ANSB3 = 0;
+    //i2c init
+    i2c_master_setup();
+    //set up accl and gyro
+    writetoIMU(0x10,0b10000010);  //CTRL1_XL accelerator
+    writetoIMU(0x11,0b10001000);  //CTRL2_G gyro
+    writetoIMU(0x12,0b00000100);  //CTRL3_C control
+    
+}
+
+unsigned char readIMU(unsigned char register_addr) {
+    i2c_master_start();
+    i2c_master_send(IMU_ADDR<<1|0);//send address, write mode
+    i2c_master_send(register_addr);              //write to register
+    i2c_master_restart();
+    i2c_master_send(IMU_ADDR<<1|1);//send address, read mode
+    unsigned char r = i2c_master_recv();//save the value
+    i2c_master_ack(1);                  //tell slave that master get the value
+    i2c_master_stop();
+    
+    return r;
+
+}
+
+void IMU_read_multiple(unsigned char register_addr, unsigned char * data, int length) {
+    i2c_master_start();
+    i2c_master_send(IMU_ADDR<<1|0);//send address, write mode
+    i2c_master_send(register_addr);              //write to register
+    i2c_master_restart();
+    i2c_master_send(IMU_ADDR<<1|1);//send address, read mode
+    int count = 0;
+    while (1) {
+        data[count] = i2c_master_recv();//save the value
+        if (count == (length-1)) {
+            i2c_master_ack(1);                  //tell slave no more byte should be send
+            break;
+        } 
+        else {
+            i2c_master_ack(0);                  //tell slave to send another byte
+        }
+        count ++;
+    }
+    i2c_master_stop();
+}
+
+void writetoIMU(unsigned char register_addr, unsigned char send_value) {
+    i2c_master_start();
+    i2c_master_send(IMU_ADDR<<1|0);//send address, write mode
+    i2c_master_send(register_addr);              //write to register
+    i2c_master_send(send_value);        //sent in value
+    i2c_master_stop();
+}
+
+void read_all_value() {
+    int data_length = 14;   //which means all data
+    unsigned char alldata[data_length];
+    IMU_read_multiple(0x20,alldata,data_length);
+    //seperate all data
+    unsigned char L_bits[data_length/2];
+    unsigned char H_bits[data_length/2];
+    int i=0;
+    for (i = 0;i<data_length/2;i++) {
+        L_bits[i] = alldata[i*2];
+        H_bits[i] = alldata[i*2+1];
+    }
+    signed short temp_raw = (H_bits[0])<<8|(L_bits[0]);
+    signed short g_x_raw = (H_bits[1])<<8|(L_bits[1]);
+    signed short g_y_raw = (H_bits[2])<<8|(L_bits[2]);
+    signed short g_z_raw = (H_bits[3])<<8|(L_bits[3]);
+    signed short a_x_raw = (H_bits[4])<<8|(L_bits[4]);
+    signed short a_y_raw = (H_bits[5])<<8|(L_bits[5]);
+    signed short a_z_raw = (H_bits[6])<<8|(L_bits[6]);
+        
+    temp = temp_raw*0.0625; 
+    g_x = g_x_raw*35.0/1000.0;       //35mdps/LSB from data sheet page 15
+    g_y = g_y_raw*35.0/1000.0;
+    g_z = g_z_raw*35.0/1000.0;
+    a_x = a_x_raw*0.061/1000.0;      //0.061mg/LSB from data sheet page 15
+    a_y = a_y_raw*0.061/1000.0;
+    a_z = a_z_raw*0.061/1000.0;
+    a_z = -a_z;
+}
 
 void APP_USBDeviceHIDEventHandler(USB_DEVICE_HID_INDEX hidInstance,
         USB_DEVICE_HID_EVENT event, void * eventData, uintptr_t userData) {
@@ -262,12 +456,37 @@ void APP_USBDeviceEventHandler(USB_DEVICE_EVENT event, void * eventData, uintptr
 
 void APP_Initialize(void) {
     /* Place the App state machine in its initial state. */
+    
+    //LCD and IMU initialization
+    // do your TRIS and LAT commands here
+    TRISBbits.TRISB4 = 1;
+    TRISAbits.TRISA4 = 0;
+    LATAbits.LATA4 = 0;
+    //initialize IMU
+    initIMU();
+    
+    IMU_count = 0;
+    collect_size = 400;
+    
+    //init buffer arrays to all zeros
+    buffer_clear();
+
+    //read from who am I
+    unsigned char who_am_i_addr = 0x0F;
+    unsigned char who_am_i_value = readIMU(who_am_i_addr);
+    if (who_am_i_value == 0b01101001){
+//        display_String("Connected!",15,10,BLACK,WHITE);
+    }
+    
     appData.state = APP_STATE_INIT;
     appData.deviceHandle = USB_DEVICE_HANDLE_INVALID;
     appData.isConfigured = false;
     //appData.emulateMouse = true;
     appData.hidInstance = 0;
     appData.isMouseReportSendBusy = false;
+    
+    //get the start time
+    startTime = _CP0_GET_COUNT();
 }
 
 /******************************************************************************
@@ -282,7 +501,8 @@ void APP_Tasks(void) {
 //    static int8_t vector = 0;
 //    static uint8_t movement_length = 0;
 //    int8_t dir_table[] = {-4, -4, -4, 0, 4, 4, 4, 0};
-
+    static uint8_t inc = 0;
+    static uint8_t inc_cap = 100;
     /* Check the application's current state. */
     switch (appData.state) {
             /* Application's initial state. */
@@ -326,9 +546,45 @@ void APP_Tasks(void) {
 //                appData.yCoordinate = (int8_t) dir_table[(vector + 2) & 0x07];
 //                vector++;
 //                movement_length = 0;
-//            }
-            appData.xCoordinate = (int8_t) 2;
-            appData.yCoordinate = (int8_t) 2;
+//            } 
+            //get the IMU data
+            read_all_value();
+            MAF(4);
+            
+            float IIR_data = IIR(0.5,0.5);
+            //Set FIR gains
+            int s_n = 7;
+//            float gg[] = {0.0457,0.4543,0.4543,0.0457};    //four gains
+            float gg[] = {0.0264,0.1405,0.3331,0.3331,0.1405,0.0264};       //six gains
+//            float gg[] = {0.0212,0.0897,0.2343,0.3094,0.2343,0.0897,0.0212};
+
+            float FIR_data = FIR(s_n,gg);
+            
+//            appData.xCoordinate = (int8_t) 1;
+//            appData.yCoordinate = (int8_t) 1;
+            
+            if (inc > inc_cap) {
+                if (MAF_data[0] > 0) {
+                    appData.xCoordinate = (int8_t) 1;
+                }
+                else {
+                    appData.xCoordinate = (int8_t) -1;
+                }
+                if (MAF_data[1] > 0) {
+                    appData.yCoordinate = (int8_t) 1;
+                }
+                else {
+                    appData.yCoordinate = (int8_t) -1;
+                }
+                inc = 0;
+            }
+            else {
+                appData.xCoordinate = (int8_t) 0;
+                appData.yCoordinate = (int8_t) 0;
+//                inc ++;
+            }
+            
+            
 
             if (!appData.isMouseReportSendBusy) {
                 /* This means we can send the mouse report. The
@@ -381,6 +637,7 @@ void APP_Tasks(void) {
                     appData.setIdleTimer = 0;
                 }
 //                movement_length++;
+                inc++;
             }
 
             break;
