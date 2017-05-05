@@ -475,7 +475,7 @@ void APP_Initialize(void) {
     unsigned char who_am_i_addr = 0x0F;
     unsigned char who_am_i_value = readIMU(who_am_i_addr);
     if (who_am_i_value == 0b01101001){
-//        display_String("Connected!",15,10,BLACK,WHITE);
+        LATAbits.LATA4 = 1;
     }
     
     appData.state = APP_STATE_INIT;
@@ -502,7 +502,6 @@ void APP_Tasks(void) {
 //    static uint8_t movement_length = 0;
 //    int8_t dir_table[] = {-4, -4, -4, 0, 4, 4, 4, 0};
     static uint8_t inc = 0;
-    static uint8_t inc_cap = 100;
     /* Check the application's current state. */
     switch (appData.state) {
             /* Application's initial state. */
@@ -551,37 +550,40 @@ void APP_Tasks(void) {
             read_all_value();
             MAF(4);
             
-            float IIR_data = IIR(0.5,0.5);
-            //Set FIR gains
-            int s_n = 7;
-//            float gg[] = {0.0457,0.4543,0.4543,0.0457};    //four gains
-            float gg[] = {0.0264,0.1405,0.3331,0.3331,0.1405,0.0264};       //six gains
-//            float gg[] = {0.0212,0.0897,0.2343,0.3094,0.2343,0.0897,0.0212};
-
-            float FIR_data = FIR(s_n,gg);
+//            float IIR_data = IIR(0.5,0.5);
+//            //Set FIR gains
+//            int s_n = 7;
+////            float gg[] = {0.0457,0.4543,0.4543,0.0457};    //four gains
+//            float gg[] = {0.0264,0.1405,0.3331,0.3331,0.1405,0.0264};       //six gains
+////            float gg[] = {0.0212,0.0897,0.2343,0.3094,0.2343,0.0897,0.0212};
+//
+//            float FIR_data = FIR(s_n,gg);
             
-//            appData.xCoordinate = (int8_t) 1;
+//            appData.xCoordinate = (int8_t) 2;
 //            appData.yCoordinate = (int8_t) 1;
             
-            if (inc > inc_cap) {
+            if (inc > 20) {
+                int8_t speed_x = (int)(MAF_data[0]/0.6*5.0);
+                int8_t speed_y = (int)(MAF_data[1]/0.6*5.0);
+//                int8_t speed_x = 1;
+//                int8_t speed_y = 1;
                 if (MAF_data[0] > 0) {
-                    appData.xCoordinate = (int8_t) 1;
+                    appData.xCoordinate = (int8_t) speed_x;
                 }
                 else {
-                    appData.xCoordinate = (int8_t) -1;
+                    appData.xCoordinate = (int8_t) -speed_x;
                 }
                 if (MAF_data[1] > 0) {
-                    appData.yCoordinate = (int8_t) 1;
+                    appData.yCoordinate = (int8_t) speed_y;
                 }
                 else {
-                    appData.yCoordinate = (int8_t) -1;
+                    appData.yCoordinate = (int8_t) -speed_y;
                 }
                 inc = 0;
             }
             else {
                 appData.xCoordinate = (int8_t) 0;
                 appData.yCoordinate = (int8_t) 0;
-//                inc ++;
             }
             
             

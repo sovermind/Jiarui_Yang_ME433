@@ -698,10 +698,21 @@ void APP_Tasks(void) {
 //            float gg[] = {0.0457,0.4543,0.4543,0.0457};    //four gains
             float gg[] = {0.0264,0.1405,0.3331,0.3331,0.1405,0.0264};       //six gains
 //            float gg[] = {0.0212,0.0897,0.2343,0.3094,0.2343,0.0897,0.0212};
-
+            
             float FIR_data = FIR(s_n,gg);
-//            len = sprintf(dataOut,"%d,%f,%f,%f\r\n",IMU_count,MAF_data[0],MAF_data[1],MAF_data[2]);
-            len = sprintf(dataOut,"%d,%.3f,%.3f,%.3f,%3f\r\n",IMU_count,a_z,MAF_data[2],IIR_data,FIR_data);
+            
+            unsigned char who_am_i_addr = 0x0F;
+            unsigned char who_am_i_value = readIMU(who_am_i_addr);
+            int check_connect = 0;
+            if (who_am_i_value == 0b01101001){
+                check_connect = 1;
+            }
+            
+//            //can get the angle
+//            float pitch = (atan2(a_y,a_z)*180/M_PI);
+//            float roll = (atan2(-a_x,a_z)*180/M_PI);
+//            len = sprintf(dataOut,"%d,%f,%f,%f,%f\r\n",IMU_count,MAF_data[0],MAF_data[1],pitch,roll);
+            len = sprintf(dataOut,"%d,%.3f,%.3f,%.3f,%3f,%d\r\n",IMU_count,a_z,MAF_data[2],IIR_data,FIR_data,check_connect);
             
             if (appData.isReadComplete) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
