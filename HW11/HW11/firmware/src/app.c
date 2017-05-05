@@ -563,22 +563,10 @@ void APP_Tasks(void) {
 //            appData.yCoordinate = (int8_t) 1;
             
             if (inc > 20) {
-                int8_t speed_x = (int)(MAF_data[0]/0.6*5.0);
-                int8_t speed_y = (int)(MAF_data[1]/0.6*5.0);
-//                int8_t speed_x = 1;
-//                int8_t speed_y = 1;
-                if (MAF_data[0] > 0) {
-                    appData.xCoordinate = (int8_t) speed_x;
-                }
-                else {
-                    appData.xCoordinate = (int8_t) -speed_x;
-                }
-                if (MAF_data[1] > 0) {
-                    appData.yCoordinate = (int8_t) speed_y;
-                }
-                else {
-                    appData.yCoordinate = (int8_t) -speed_y;
-                }
+                int8_t speed_x = (int)(MAF_data[0]/0.6*10.0);
+                int8_t speed_y = (int)(MAF_data[1]/0.6*10.0);
+                appData.xCoordinate = (int8_t) speed_x;
+                appData.yCoordinate = (int8_t) speed_y;
                 inc = 0;
             }
             else {
