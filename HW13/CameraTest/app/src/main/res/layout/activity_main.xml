@@ -23,6 +23,12 @@
                 tools:layout_editor_absoluteY="8dp"
                 tools:layout_editor_absoluteX="8dp">
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sensitivity: 51"
+                    android:id="@+id/sensitivityText"/>
+
                 <SeekBar
                     android:id="@+id/sensitivityBar"
                     android:layout_width="fill_parent"
@@ -30,7 +36,7 @@
                     android:layout_margin="10dp"
                     android:progress="20"
                     android:secondaryProgress="0"
-                    android:paddingTop="10dp"
+                    android:paddingTop="5dp"
                     android:paddingBottom="10dp"
                     />
 

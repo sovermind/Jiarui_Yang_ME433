@@ -21,6 +21,8 @@ import android.widget.TextView;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 
+import org.w3c.dom.Text;
+
 import java.io.IOException;
 
 import static android.graphics.Color.blue;
@@ -31,6 +33,7 @@ import static android.graphics.Color.rgb;
 public class MainActivity extends Activity implements TextureView.SurfaceTextureListener {
     private Camera mCamera;
     private TextureView mTextureView;
+    private TextView ssTextView;
     private SurfaceView mSurfaceView;
     private SurfaceHolder mSurfaceHolder;
     private Bitmap bmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
@@ -49,6 +52,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
         mTextView = (TextView) findViewById(R.id.cameraStatus);
         mSeekBar = (SeekBar) findViewById(R.id.sensitivityBar);
+        ssTextView = (TextView) findViewById(R.id.sensitivityText);
 
         // see if the app has permission to use the camera
         ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, 1);
@@ -143,7 +147,9 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                thresh = progress;
+                double pg = progress*256.0/100.0;
+                thresh = (int) pg;
+                ssTextView.setText("Sensitivity: " + thresh);
             }
 
             @Override
