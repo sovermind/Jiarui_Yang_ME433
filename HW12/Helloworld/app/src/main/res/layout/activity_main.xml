@@ -35,7 +35,7 @@
 
         <TextView
             android:id="@+id/textView01"
-            android:text="initial value "
+            android:text="The value is: 20 "
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             />
