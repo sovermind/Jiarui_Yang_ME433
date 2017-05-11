@@ -102,6 +102,15 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         return true;
     }
 
+    public boolean isGreen(int pix) {
+        boolean isG = false;
+        if ((green(pix) - red(pix)) > thresh*2/3 && (green(pix) - blue(pix)) > thresh*2/3) {
+            isG = true;
+        }
+
+        return isG;
+    }
+
     // the important function
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         // every time there is a new Camera preview frame
@@ -116,7 +125,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
                 // in the row, see if there is more green than red
                 for (int i = 0; i < bmp.getWidth(); i++) {
-                    if ((green(pixels[i]) - red(pixels[i])) > thresh) {
+                    if (isGreen(pixels[i])) {
                         pixels[i] = rgb(0, 255, 0); // over write the pixel with pure green
                     }
                 }
@@ -147,8 +156,8 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                double pg = progress*256.0/100.0;
-                thresh = (int) pg;
+//                double pg = progress*128.0/100.0;
+                thresh = progress;
                 ssTextView.setText("Sensitivity: " + thresh);
             }
 
