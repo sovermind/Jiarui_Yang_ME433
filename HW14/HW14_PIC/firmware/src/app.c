@@ -461,8 +461,8 @@ void APP_Tasks(void) {
             appData.isWriteComplete = false;
             appData.state = APP_STATE_WAIT_FOR_WRITE_COMPLETE;
 
-            len = sprintf(dataOut, "%d\r\n", i);
-            i++;
+//            len = sprintf(dataOut, "%d\r\n", i);
+//            i++;
             if (gotRx) {
                 len = sprintf(dataOut, "got: %d\r\n", rxVal);
                 i++;
