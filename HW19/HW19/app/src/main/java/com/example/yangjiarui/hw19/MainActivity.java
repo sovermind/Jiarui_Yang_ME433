@@ -33,14 +33,16 @@ import static android.graphics.Color.rgb;
 public class MainActivity extends Activity implements TextureView.SurfaceTextureListener {
     private Camera mCamera;
     private TextureView mTextureView;
-    private TextView ssTextView;
+    private TextView RangeTextView;
+    private TextView ThreshTextView;
     private SurfaceView mSurfaceView;
     private SurfaceHolder mSurfaceHolder;
     private Bitmap bmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
     private Canvas canvas = new Canvas(bmp);
     private Paint paint1 = new Paint();
     private TextView mTextView;
-    private SeekBar mSeekBar;
+    private SeekBar RangeSeekBar;
+    private SeekBar ThreshSeekBar;
 
     static long prevtime = 0; // for FPS calculation
     int thresh = 0; // comparison value
@@ -54,8 +56,10 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // keeps the screen from turning off
 
         mTextView = (TextView) findViewById(R.id.cameraStatus);
-        mSeekBar = (SeekBar) findViewById(R.id.sensitivityBar);
-        ssTextView = (TextView) findViewById(R.id.sensitivityText);
+        RangeSeekBar = (SeekBar) findViewById(R.id.RangeBar);
+        ThreshSeekBar= (SeekBar) findViewById(R.id.ThreshBar);
+        RangeTextView = (TextView) findViewById(R.id.RangeValue);
+        ThreshTextView = (TextView) findViewById(R.id.ThreshValue);
 
         // see if the app has permission to use the camera
         ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, 1);
@@ -114,6 +118,18 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         return isG;
     }
 
+    public boolean isGrey(int pix) {
+        if (((green(pix) - red(pix)) > -R_COM)&&((green(pix) - red(pix)) < R_COM)&&(green(pix)  > T_COM) && (red(pix)>T_COM)) {
+            if (((green(pix) - blue(pix)) > -R_COM)&&((green(pix) - blue(pix)) < R_COM)){
+                return true;
+            } else{
+                return false;
+            }
+        }else
+            return false;
+
+    }
+
     // the important function
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         // every time there is a new Camera preview frame
@@ -133,11 +149,11 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 //                    if (isGreen(pixels[i])) {
 //                        pixels[i] = rgb(0, 255, 0); // over write the pixel with pure green
 //                    }
-                    if (((green(pixels[i]) - red(pixels[i])) > -R_COM)&&((green(pixels[i]) - red(pixels[i])) < R_COM)&&(green(pixels[i])  > T_COM)) {
+                    if (isGrey(pixels[i])) {
                         pixels[i] = rgb(1, 1, 1); // set the pixel to almost 100% black
 
-                        sum_m = sum_m + green(pixels[i])+red(pixels[i])+blue(pixels[i]);
-                        sum_mr = sum_mr + (green(pixels[i])+red(pixels[i])+blue(pixels[i]))*i;
+                        sum_m = sum_m + green(pixels[i]) + red(pixels[i]) + blue(pixels[i]);
+                        sum_mr = sum_mr + (green(pixels[i]) + red(pixels[i]) + blue(pixels[i])) * i;
                     }
                     if (sum_m>5) {
                         COM = sum_mr/sum_m;
@@ -171,13 +187,32 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     }
 
     private void setMyControlListener() {
-        mSeekBar.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+        RangeSeekBar.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
 
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 //                double pg = progress*128.0/100.0;
-                thresh = progress;
-                ssTextView.setText("Sensitivity: " + thresh);
+                R_COM = progress;
+                RangeTextView.setText("Range: " + R_COM);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+        ThreshSeekBar.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+//                double pg = progress*128.0/100.0;
+                T_COM = progress;
+                ThreshTextView.setText("Thresh: " + T_COM);
             }
 
             @Override

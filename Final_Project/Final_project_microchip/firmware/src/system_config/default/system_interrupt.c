@@ -77,7 +77,42 @@ void __ISR(_USB_1_VECTOR, ipl4AUTO) _IntHandlerUSBInstance0(void)
     DRV_USBFS_Tasks_ISR(sysObj.drvUSBObject);
 }
 
+void __ISR(_INPUT_CAPTURE_4_VECTOR, IPL5SOFT) IC4ISR(void) {
 
+    // get the time the interrupt occurred
+    long mic = _CP0_GET_COUNT();
+    int i;
+
+    int unused = IC4BUF; // the value of timer2 right now, doesn't matter
+
+    // check for coreTimer overflow
+    while (mic - V1.prevMic < 0) {
+        mic = mic + 4294967295; // largest unsigned 32bit int
+    }
+
+    // shift the time into the buffer
+    for (i = 0; i < 10; i++) {
+        V1.changeTime[i] = V1.changeTime[i + 1];
+    }
+    V1.changeTime[10] = mic;
+
+    // if the buffer is not full
+    if (V1.collected < 11) {
+        V1.collected++;
+    } else {
+        // if the timer values match the waveform pattern when about 7 feet away from the emitter
+        if ((V1.changeTime[1] - V1.changeTime[0] > 7000 * 24) && (V1.changeTime[3] - V1.changeTime[2] > 7000 * 24) && (V1.changeTime[6] - V1.changeTime[5] < 50 * 24) && (V1.changeTime[10] - V1.changeTime[9] < 50 * 24)) {
+            V1.horzAng = (V1.changeTime[5] - V1.changeTime[4]) * DEG_PER_CORE;
+            V1.vertAng = (V1.changeTime[9] - V1.changeTime[8]) * DEG_PER_CORE;
+            V1.useMe = 1;
+            LATAbits.LATA4 = !LATAbits.LATA4; // blink your LED to know you got new position data info
+        }
+    }
+
+    V1.prevMic = mic;
+
+    IFS0bits.IC4IF = 0; // clear the interrupt flag
+}
 
  
 /*******************************************************************************
