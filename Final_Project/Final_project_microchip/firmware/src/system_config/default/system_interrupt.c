@@ -80,6 +80,7 @@ void __ISR(_USB_1_VECTOR, ipl4AUTO) _IntHandlerUSBInstance0(void)
 void __ISR(_INPUT_CAPTURE_4_VECTOR, IPL5SOFT) IC4ISR(void) {
 
     // get the time the interrupt occurred
+//    LATAbits.LATA4 = 1;
     long mic = _CP0_GET_COUNT();
     int i;
 

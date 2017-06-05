@@ -193,7 +193,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 //                double pg = progress*128.0/100.0;
                 R_COM = progress;
-                RangeTextView.setText("Range: " + R_COM);
+                RangeTextView.setText("Range Value: " + R_COM);
             }
 
             @Override
@@ -212,7 +212,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 //                double pg = progress*128.0/100.0;
                 T_COM = progress;
-                ThreshTextView.setText("Thresh: " + T_COM);
+                ThreshTextView.setText("Thresh Value: " + T_COM);
             }
 
             @Override

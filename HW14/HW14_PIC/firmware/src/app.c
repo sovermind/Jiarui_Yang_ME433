@@ -346,6 +346,7 @@ void APP_Initialize(void) {
     appData.readBuffer = &readBuffer[0];
 
     startTime = _CP0_GET_COUNT();
+    
 }
 
 /******************************************************************************

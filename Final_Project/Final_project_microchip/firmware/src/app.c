@@ -56,6 +56,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "app.h"
 #include <stdio.h>
 #include <xc.h>
+#include <math.h>
 
 // *****************************************************************************
 // *****************************************************************************
@@ -352,6 +353,10 @@ void APP_Initialize(void) {
     print_numb = 1;
     motor1_PWM = 600;
     motor2_PWM = 600;
+    TRISAbits.TRISA4 = 0;
+//    LATAbits.LATA4 = 1;
+    
+    
     // motor initialization
     RPA0Rbits.RPA0R = 0b0101; // A0 is OC1
     TRISAbits.TRISA1 = 0;
@@ -381,6 +386,7 @@ void APP_Initialize(void) {
     LATBbits.LATB3 = 1; // direction
     OC4RS = motor2_PWM; // velocity, 50%
     
+    
     //HTC Vive sensor
     // initialize the sensor variables
     V1.prevMic = 0;
@@ -400,6 +406,8 @@ void APP_Initialize(void) {
     IPC4bits.IC4IS = 1; // step 4: interrupt priority 1
     IFS0bits.IC4IF = 0; // step 5: clear the int flag
     IEC0bits.IC4IE = 1; // step 6: enable INT0 by setting IEC0<3>
+//    LATAbits.LATA4 = 1;
+    
 }
 
 /******************************************************************************
@@ -549,7 +557,11 @@ void APP_Tasks(void) {
 
             float PWM1 = OC1R/1200.0;
             float PWM2 = OC4R/1200.0;
-            len = sprintf(dataOut, "%d PWM1: %.2f, direction1: %d\r\n",print_numb,PWM1,motor1_direction);
+            float xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
+            float yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
+//            float xPos = 0;
+//            float yPos = 0;
+            len = sprintf(dataOut, "%d PWM1: %.2f, direction1: %d Position: %.2f,%.2f\r\n",print_numb,PWM1,motor1_direction,xPos,yPos);
             i++;
             if (appData.isReadComplete) {
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
