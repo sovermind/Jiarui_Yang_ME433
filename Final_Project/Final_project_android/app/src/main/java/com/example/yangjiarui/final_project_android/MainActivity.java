@@ -15,7 +15,7 @@ import android.hardware.Camera;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
+//import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -35,7 +35,7 @@ import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
-import org.w3c.dom.Text;
+//import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -81,10 +81,14 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     float pre_servo_PWM = 4850;
     float prev_COM = 0;
     float servo_neutral_PWM = 4850;
+    float motor1_neutral_PWM = 400;
+    float motor2_neutral_PWM = 400;
 
     //PD control gains
-    float Kp = 2.3f;
+    float Kp = 2.7f;
     float Kd = 3.3f;
+    float Kp_m = 3f;
+    float Kd_m = 5f;
 
     int first_click = 1;
 
@@ -121,7 +125,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                     motor1_PWM = 4;
                     motor2_PWM = 4;
                     servo_PWM = 4850;
-                    String sendString = String.valueOf(motor1_PWM) +' '+String.valueOf(motor2_PWM)+ ' '+String.valueOf((int)servo_PWM)+'\n';
+                    String sendString = String.valueOf((int)motor1_PWM) +' '+String.valueOf((int)motor2_PWM)+ ' '+String.valueOf((int)servo_PWM)+'\n';
                     try {
                         sPort.write(sendString.getBytes(), 10); // 10 is the timeout
                     } catch (IOException e) { }
@@ -131,7 +135,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                     motor1_PWM = 10*RangeSeekBar.getProgress();
                     motor2_PWM = 10*RangeSeekBar.getProgress();
                     servo_PWM = 70*ThreshSeekBar.getProgress();
-                    String sendString = String.valueOf(motor1_PWM) +' '+String.valueOf(motor2_PWM)+ ' '+String.valueOf((int)servo_PWM)+'\n';
+                    String sendString = String.valueOf((int)motor1_PWM) +' '+String.valueOf((int)motor2_PWM)+ ' '+String.valueOf((int)servo_PWM)+'\n';
                     try {
                         sPort.write(sendString.getBytes(), 10); // 10 is the timeout
                     } catch (IOException e) { }
@@ -386,34 +390,78 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         }
 
         float error = ave_COM - 320;
-//        if (error >-50 && error < 50) {
-//            error = 0;
+//        if (error <-150) {
+//            motor1_PWM = 300;
+//            motor2_PWM = 100;
+//        }else if (error > 150){
+//            motor2_PWM = 300;
+//            motor1_PWM = 100;
+//        }
+//        else {
+//            motor2_PWM = 330;
+//            motor1_PWM = 330;
 //        }
         //use servo to control the direction
 
-        float error_vel = ave_COM-prev_COM;
-        prev_COM = ave_COM;
-        servo_PWM = servo_neutral_PWM + error*Kp -error_vel*Kd;
-        if (ave_COM == 0) {
-            servo_PWM = pre_servo_PWM;
-        }
-        pre_servo_PWM = servo_PWM;
-        if (servo_PWM > 6300) {
-            servo_PWM = 6300;
-        }else if (servo_PWM < 3000) {
-            servo_PWM = 3000;
-        }
-        //Now sent over the PWM and servo PWM
+        float error_vel =0;
+        if (ave_COM !=0) {
+            error_vel = ave_COM - prev_COM;
+            prev_COM = ave_COM;
+//            servo_PWM = servo_neutral_PWM + error * Kp - error_vel * Kd;
+            motor1_PWM = (int) (motor1_neutral_PWM - error * Kp_m - error_vel * Kd_m);
+            motor2_PWM = (int) (motor2_neutral_PWM + error * Kp_m + error_vel * Kd_m);
+//            if (ave_COM == 0) {
+//                servo_PWM = pre_servo_PWM;
+//                motor1_PWM = 240;
+//                motor2_PWM = 240;
+//            }
+
+//            if (motor1_PWM > motor2_PWM) {
+//                double angle = Math.atan(0.909*(2*(motor1_PWM - motor2_PWM))/(motor1_PWM+motor2_PWM));
+//                servo_PWM = 4850-(float)(angle *12000/3.1415);
+//            }else {
+//                double angle = Math.atan(0.909*(2*(motor2_PWM - motor1_PWM))/(motor1_PWM+motor2_PWM));
+//                servo_PWM = 4850+(float)(angle *12000/3.1415);
+//            }
+//            servo_PWM = 4850 - (motor1_PWM-motor2_PWM)*1f;
+            pre_servo_PWM = servo_PWM;
+            if (servo_PWM > 6300) {
+                servo_PWM = 6300;
+            } else if (servo_PWM < 3000) {
+                servo_PWM = 3000;
+            }
+
+            if (motor1_PWM > 550) {
+                motor1_PWM = 550;
+            } else if (motor1_PWM < 10) {
+                motor1_PWM = 10;
+            }
+
+            if (motor2_PWM > 550) {
+                motor2_PWM = 550;
+            } else if (motor2_PWM < 10) {
+                motor2_PWM = 10;
+            }
+            if (motor1_PWM == 10 && motor2_PWM != 10) {
+                servo_PWM = 4850 + 800;
+            }
+            else if (motor2_PWM == 10 && motor1_PWM != 10) {
+                servo_PWM = 4850 - 800;
+            }else {
+                servo_PWM = 4850;
+            }
+            //Now sent over the PWM and servo PWM
 //        motor1_PWM = 600;
 //        motor2_PWM = 600;
 //        servo_PWM = 3000;
-        if (first_click == 0) {
-            String sendString = String.valueOf(motor1_PWM) +' '+String.valueOf(motor2_PWM)+ ' '+String.valueOf((int)servo_PWM)+'\n';
-            try {
-                sPort.write(sendString.getBytes(), 10); // 10 is the timeout
-            } catch (IOException e) { }
+            if (first_click == 0) {
+                String sendString = String.valueOf((int) motor1_PWM) + ' ' + String.valueOf((int) motor2_PWM) + ' ' + String.valueOf((int) servo_PWM) + '\n';
+                try {
+                    sPort.write(sendString.getBytes(), 10); // 10 is the timeout
+                } catch (IOException e) {
+                }
+            }
         }
-
 
         // draw a circle at some position
         int pos = 50;
