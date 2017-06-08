@@ -67,6 +67,8 @@
                     android:layout_width="640px"
                     android:layout_height="480px" />
 
+
+
                 <TextureView
                     android:id="@+id/textureview"
                     android:layout_marginTop="30dp"

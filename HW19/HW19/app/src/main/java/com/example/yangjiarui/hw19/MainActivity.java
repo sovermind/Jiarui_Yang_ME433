@@ -16,7 +16,10 @@ import android.support.v4.content.ContextCompat;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.TextureView;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
@@ -60,6 +63,8 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         ThreshSeekBar= (SeekBar) findViewById(R.id.ThreshBar);
         RangeTextView = (TextView) findViewById(R.id.RangeValue);
         ThreshTextView = (TextView) findViewById(R.id.ThreshValue);
+
+
 
         // see if the app has permission to use the camera
         ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, 1);

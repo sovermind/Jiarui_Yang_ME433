@@ -74,6 +74,15 @@ int motor2_direction = 1;
 int print_numb = 1;
 int motor1_PWM = 600;
 int motor2_PWM = 600;
+int servo_PWM = 4850;
+int send_Motor_numb = 1;
+
+char rx[64]; // the raw data
+int rxPos = 0; // how much data has been stored
+int gotRx = 0; // the flag
+int rxVal1 = 0; // a place to store the int that was received
+int rxVal2 = 0;
+int rxVal3 = 4800; // servo motor control, 1500-7500(0-180)
 
 // *****************************************************************************
 /* Application Data
@@ -353,6 +362,7 @@ void APP_Initialize(void) {
     print_numb = 1;
     motor1_PWM = 600;
     motor2_PWM = 600;
+    servo_PWM = 4850;
     TRISAbits.TRISA4 = 0;
 //    LATAbits.LATA4 = 1;
     
@@ -381,10 +391,11 @@ void APP_Initialize(void) {
     OC4CONbits.ON = 1;
     
     //motor control
-    LATAbits.LATA1 = 1; // direction
+    LATAbits.LATA1 = 0; // direction
     OC1RS = motor1_PWM; // velocity, 50%
-    LATBbits.LATB3 = 1; // direction
+    LATBbits.LATB3 = 0; // direction
     OC4RS = motor2_PWM; // velocity, 50%
+    send_Motor_numb = 1; //determine which motor PWM is being sent
     
     
     //HTC Vive sensor
@@ -407,6 +418,18 @@ void APP_Initialize(void) {
     IFS0bits.IC4IF = 0; // step 5: clear the int flag
     IEC0bits.IC4IE = 1; // step 6: enable INT0 by setting IEC0<3>
 //    LATAbits.LATA4 = 1;
+    
+    //servo init
+    RPB14Rbits.RPB14R = 0b0101; //OC3 for B14 pin
+    T3CONbits.TCKPS = 4; // prescaler N=16
+    PR3 = 60000 - 1; // 50Hz
+    TMR3 = 0;
+    OC3CONbits.OCM = 0b110; // PWM mode without fault pin; other OC1CON bits are defaults
+    OC3CONbits.OCTSEL = 1; // use timer3
+    OC3RS = 4850; // should set the motor to 90 degrees (0.5ms to 2.5ms is 1500 to 7500 for 0 to 180 degrees)
+    OC3R = 4850; // read-only, 4800 is about the middle value, pointing straight forward
+    T3CONbits.ON = 1;
+    OC3CONbits.ON = 1;
     
 }
 
@@ -466,7 +489,26 @@ void APP_Tasks(void) {
                 USB_DEVICE_CDC_Read(USB_DEVICE_CDC_INDEX_0,
                         &appData.readTransferHandle, appData.readBuffer,
                         APP_READ_BUFFER_SIZE);
-
+                
+                int ii = 0;
+                // loop thru the characters in the buffer
+                while (appData.readBuffer[ii] != 0) {
+                    // if you got a newline
+                    if (appData.readBuffer[ii] == '\n' || appData.readBuffer[ii] == '\r') {
+                        rx[rxPos] = 0; // end the array
+                        sscanf(rx, "%d %d %d", &rxVal1,&rxVal2,&rxVal3); // get the int out of the array
+                        gotRx = 1; // set the flag
+                        break; // get out of the while loop
+                    } else if (appData.readBuffer[ii] == 0) {
+                        break; // there was no newline, get out of the while loop
+                    } else {
+                        // save the character into the array
+                        rx[rxPos] = appData.readBuffer[ii];
+                        rxPos++;
+                        ii++;
+                    }
+                }
+                
                 if (appData.readTransferHandle == USB_DEVICE_CDC_TRANSFER_HANDLE_INVALID) {
                     appData.state = APP_STATE_ERROR;
                     break;
@@ -476,32 +518,40 @@ void APP_Tasks(void) {
             break;
 
         case APP_STATE_WAIT_FOR_READ_COMPLETE:
-            if (appData.isReadComplete) {
-                if (appData.readBuffer[0] == 'i') {
+            if (gotRx) {
+                if (rxVal1 == 1) {
                     motor1_PWM = motor1_PWM + 100;
                     motor2_PWM = motor2_PWM + 100;
                     print_command = true;
                 }
-                else if (appData.readBuffer[0] == 'd') {
+                else if (rxVal1 == 2) {
                     motor1_PWM = motor1_PWM - 100;
                     motor2_PWM = motor2_PWM - 100;
                     print_command = true;
-                }else if (appData.readBuffer[0] == 'f') {
+                }else if (rxVal1 == 3) {
                     //forward direction
                     motor1_direction = 1;
                     motor2_direction = 1;
                     print_command = true;
-                }else if (appData.readBuffer[0] == 'b') {
+                }else if (rxVal1 == 4) {
                     //backward direction
                     motor1_direction = 0;
                     motor2_direction = 0;
                     print_command = true;
-                }else {
+                }
+                else if (rxVal1>4 && rxVal2>4 && rxVal1 <=1200 && rxVal2 <=1200) {
+                            motor1_PWM = rxVal1;
+                            print_command = true;
+                            motor2_PWM = rxVal2;
+                            servo_PWM = rxVal3;
+                    }
+                else {
                     appData.state = APP_STATE_SCHEDULE_READ;
                     print_command = false;
                 }
             }else {
-                appData.state = APP_STATE_SCHEDULE_READ;
+                //appData.state = APP_STATE_SCHEDULE_READ;
+                appData.state = APP_STATE_CHECK_TIMER;
             }
             if (print_command) {
                 if (motor1_PWM > 1200) {
@@ -516,6 +566,7 @@ void APP_Tasks(void) {
                 }
                 OC1RS = motor1_PWM;
                 OC4RS = motor2_PWM;
+                OC3RS = servo_PWM;
                 LATAbits.LATA1 = motor1_direction;
                 LATBbits.LATB3 = motor2_direction;
                 appData.state = APP_STATE_CHECK_TIMER;
@@ -531,14 +582,19 @@ void APP_Tasks(void) {
             /* Check if a character was received or a switch was pressed.
              * The isReadComplete flag gets updated in the CDC event handler. */
 
-            if (appData.isReadComplete || (_CP0_GET_COUNT() - startTime > (48000000 / 2 / 100) && print_numb<10)) {
+            
+            if (gotRx || _CP0_GET_COUNT() - startTime > (48000000 / 2 / 2)) {
                 appData.state = APP_STATE_SCHEDULE_WRITE;
                 print_numb ++;
             }
-            if (print_numb == 10) {
-                print_numb = 1;
-                print_command = false;
-            }
+//            if (appData.isReadComplete || (_CP0_GET_COUNT() - startTime > (48000000 / 2 / 100) && print_numb<10)) {
+//                appData.state = APP_STATE_SCHEDULE_WRITE;
+//                print_numb ++;
+//            }
+//            if (print_numb == 10) {
+//                print_numb = 1;
+//                print_command = false;
+//            }
 
             break;
 
@@ -557,18 +613,39 @@ void APP_Tasks(void) {
 
             float PWM1 = OC1R/1200.0;
             float PWM2 = OC4R/1200.0;
+            float heading = (OC3R-1500)*180/6000;
             float xPos = tan((V1.vertAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT;
             float yPos = tan((V1.horzAng - 90.0) * DEG_TO_RAD) * LIGHTHOUSEHEIGHT; 
 //            float xPos = 0;
 //            float yPos = 0;
-            len = sprintf(dataOut, "%d PWM1: %.2f, direction1: %d Position: %.2f,%.2f\r\n",print_numb,PWM1,motor1_direction,xPos,yPos);
-            i++;
-            if (appData.isReadComplete) {
+//            len = sprintf(dataOut, "%d PWM1: %.2f, direction1: %d Position: %.2f,%.2f\r\n",print_numb,PWM1,motor1_direction,xPos,yPos);
+//            i++;
+//            if (appData.isReadComplete) {
+//                USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+//                        &appData.writeTransferHandle,
+//                        appData.readBuffer, 1,
+//                        USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+//            } else {
+//                USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
+//                        &appData.writeTransferHandle, dataOut, len,
+//                        USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+//                startTime = _CP0_GET_COUNT();
+//            }
+            
+            if (gotRx) {
+//                len = sprintf(dataOut, "got: %d\r\n", rxVal);
+                len = sprintf(dataOut,"got command\r\n" );
+                i++;
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle,
-                        appData.readBuffer, 1,
+                        dataOut, len,
                         USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
+                rxPos = 0;
+                gotRx = 0;
             } else {
+//                len = sprintf(dataOut, "%d\r\n", i);
+                len = sprintf(dataOut, "%d M1: %.2f,M2: %.2f,s: %.2f d: %d xy: %.2f,%.2f\r\n",i,PWM1,PWM2,heading,motor1_direction,xPos,yPos);
+                i++;
                 USB_DEVICE_CDC_Write(USB_DEVICE_CDC_INDEX_0,
                         &appData.writeTransferHandle, dataOut, len,
                         USB_DEVICE_CDC_TRANSFER_FLAGS_DATA_COMPLETE);
