@@ -81,13 +81,13 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     float pre_servo_PWM = 4850;
     float prev_COM = 0;
     float servo_neutral_PWM = 4850;
-    float motor1_neutral_PWM = 400;
-    float motor2_neutral_PWM = 400;
+    float motor1_neutral_PWM = 450;
+    float motor2_neutral_PWM = 450;
 
     //PD control gains
-    float Kp = 2.7f;
+    float Kp = 2.8f;
     float Kd = 3.3f;
-    float Kp_m = 3f;
+    float Kp_m = 2.8f;
     float Kd_m = 5f;
 
     int first_click = 1;
@@ -285,7 +285,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         Camera.Parameters parameters = mCamera.getParameters();
         parameters.setPreviewSize(640, 480);
         parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY); // no autofocusing
-        parameters.setAutoExposureLock(true); // keep the white balance constant
+        parameters.setAutoExposureLock(false); // keep the white balance constant
         mCamera.setParameters(parameters);
         mCamera.setDisplayOrientation(90); // rotate to portrait mode
 
@@ -382,7 +382,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                     ccc++;
                 }
             }
-            if (ccc==0){
+            if (ccc<=4){
                 ave_COM = 0;
             }else{
                 ave_COM = sum_COM/ccc;
@@ -431,14 +431,14 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                 servo_PWM = 3000;
             }
 
-            if (motor1_PWM > 550) {
-                motor1_PWM = 550;
+            if (motor1_PWM > 580) {
+                motor1_PWM = 580;
             } else if (motor1_PWM < 10) {
                 motor1_PWM = 10;
             }
 
-            if (motor2_PWM > 550) {
-                motor2_PWM = 550;
+            if (motor2_PWM > 580) {
+                motor2_PWM = 580;
             } else if (motor2_PWM < 10) {
                 motor2_PWM = 10;
             }
